@@ -5,7 +5,7 @@ export default function About() {
         <>
             <section id='about' className='py-20'>
                 <div className='maxW flex flex-col items-center gap-20 lg:flex-row'>
-                    <article className='flex lg:w-[50%] gap-6'>
+                    <article className='flex flex-col lg:w-[50%] gap-6 lg:flex-row'>
                         <div>
                             <img className='w-[400px] h-[500px] object-cover' src="/about1.webp" alt="" />
 

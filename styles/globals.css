@@ -59,6 +59,11 @@ body {
   background-position: center;
 }
 
+.bgContact {
+  background-image: url('/bg.png');
+  background-position: center;
+}
+
 .gradient {
   background: linear-gradient(to right, rgba(255, 255, 255, 0.8)0%, rgba(255, 255, 255, 0.8) 40%, rgba(255, 255, 255, 0.8) 60%, rgba(255, 255, 255, 0.7) 80%, transparent 100%);
 }
@@ -73,4 +78,15 @@ body {
       rgba(240, 241, 240, 1) 80%,
       rgba(240, 241, 240, 1) 90%,
       rgba(240, 241, 240, 1) 100%);
+}
+
+.gradient3 {
+  background: linear-gradient(  to bottom,
+  rgba(56, 77, 72, 1) 0%,
+  rgba(56, 77, 72, 1) 25%,
+  rgba(56, 77, 72, 1) 50%,
+  rgba(56, 77, 72, 0.93) 75%,
+  rgba(56, 77, 72, 0.9) 100%
+);
+
 }
