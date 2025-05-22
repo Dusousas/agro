@@ -1,0 +1,76 @@
+@import "tailwindcss";
+
+@theme inline {
+  --font-Manrope: "Manrope", sans-serif;
+  --font-Poppins: "Poppins", sans-serif;
+  --font-GochiHand: "Gochi Hand", cursive;
+
+  --color-GreenP: #96CA2D;
+  --color-YellowP: #FFD449;
+  --color-GrayP: #6E7271;
+  --color-BlackH1: #151D1B;
+  --color-BlackMain: #384D48;
+}
+
+p {
+  color: #6E7271;
+  font-family: "Manrope", sans-serif;
+}
+
+h1 {
+  color: #151D1B;
+  font-family: "Poppins", sans-serif;
+}
+
+h6 {
+  color: #6E7271;
+  font-family: "Gochi Hand", cursive;
+}
+
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+.maxW {
+  max-width: 1440px;
+  padding: 0 2%;
+  margin: 0 auto;
+}
+
+
+.bgMain {
+  background-image: url('/bgMain.webp');
+  background-size: cover;
+  background-position: center;
+  height: calc(100vh - 77px);
+}
+
+.bgBanner {
+  background-image: url('/banner.webp');
+  background-size: cover;
+  background-position: center;
+}
+
+.bgService {
+  background-image: url('/bgservice.webp');
+  background-position: center;
+}
+
+.gradient {
+  background: linear-gradient(to right, rgba(255, 255, 255, 0.8)0%, rgba(255, 255, 255, 0.8) 40%, rgba(255, 255, 255, 0.8) 60%, rgba(255, 255, 255, 0.7) 80%, transparent 100%);
+}
+
+.gradient2 {
+  background: radial-gradient(circle at center,
+      rgba(240, 241, 240, 0.9) 0%,
+      rgba(240, 241, 240, 0.9) 20%,
+      rgba(240, 241, 240, 1) 50%,
+      rgba(240, 241, 240, 1) 60%,
+      rgba(240, 241, 240, 1) 70%,
+      rgba(240, 241, 240, 1) 80%,
+      rgba(240, 241, 240, 1) 90%,
+      rgba(240, 241, 240, 1) 100%);
+}
