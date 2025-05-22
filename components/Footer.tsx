@@ -8,7 +8,7 @@ export default function Footer() {
         <>
             <footer className='bgService '>
                 <div className='gradient3 h-full'>
-                    <div className='maxW flex flex-col '>
+                    <div className='maxW flex flex-col lg:justify-between lg:flex-row'>
 
                         <article className='py-8 flex'>
                             <div className='lg:max-w-[40%]'>
@@ -29,7 +29,7 @@ export default function Footer() {
                             </div>
                         </article>
 
-                        <article className='py-8'>
+                        <article className='py-8 lg:w-[30%]'>
                             <h5 className='text-xl font-Manrope text-white font-bold'>Assine a Newsletter</h5>
                             <h5 className='text-white font-Manrope text-sm mt-2'>Join 60,000+ Subscribers and get a new discount coupon every saturday</h5>
                             <input className='bg-white px-4 py-3 rounded-2xl outline-0 mt-4 w-full' type="text" name="" id="" />

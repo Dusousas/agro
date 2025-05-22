@@ -12,6 +12,10 @@
   --color-BlackMain: #384D48;
 }
 
+html, body{
+  overflow-x: hidden;
+}
+
 p {
   color: #6E7271;
   font-family: "Manrope", sans-serif;
