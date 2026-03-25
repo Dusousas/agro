@@ -21,6 +21,10 @@ p {
   font-family: "Manrope", sans-serif;
 }
 
+button {
+  cursor: pointer;
+}
+
 h1 {
   color: #151D1B;
   font-family: "Poppins", sans-serif;
