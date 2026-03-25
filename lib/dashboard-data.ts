@@ -10,7 +10,7 @@ function formatMoney(value: number | string | null | undefined) {
     }).format(amount);
 }
 
-export async function getCustomerDashboardData(): Promise<CustomerDashboardData> {
+export async function getCustomerDashboardData(email?: string): Promise<CustomerDashboardData> {
     if (!isDatabaseConfigured()) {
         return customerDashboardMock;
     }
@@ -43,9 +43,10 @@ export async function getCustomerDashboardData(): Promise<CustomerDashboardData>
             from subscriptions s
             join customers c on c.id = s.customer_id
             join plans p on p.id = s.plan_id
+            where ($1::text is null or c.email = $1)
             order by s.created_at asc
             limit 1
-        `);
+        `, [email ?? null]);
 
         if (!subscriptionResult.rows.length) {
             return customerDashboardMock;
