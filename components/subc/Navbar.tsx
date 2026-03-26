@@ -1,11 +1,9 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/router";
-import { signOut, useSession } from "next-auth/react";
 import { FiMenu, FiX } from "react-icons/fi";
 
 export default function Navbar() {
     const router = useRouter();
-    const { data: session } = useSession();
     const [isOpen, setIsOpen] = useState(false);
 
     const links = useMemo(() => {
@@ -47,22 +45,6 @@ export default function Navbar() {
                     >
                         Minha assinatura
                     </a>
-                    {session?.user ? (
-                        <button
-                            type="button"
-                            onClick={() => signOut({ callbackUrl: "/" })}
-                            className="border border-gray-200 px-5 py-3 rounded-2xl font-Manrope text-BlackH1"
-                        >
-                            Sair
-                        </button>
-                    ) : (
-                        <a
-                            href="/login"
-                            className="border border-gray-200 px-5 py-3 rounded-2xl font-Manrope text-BlackH1"
-                        >
-                            Entrar
-                        </a>
-                    )}
                 </div>
             </nav>
 
@@ -105,26 +87,6 @@ export default function Navbar() {
                             >
                                 Minha assinatura
                             </a>
-                            {session?.user ? (
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        setIsOpen(false);
-                                        signOut({ callbackUrl: "/" });
-                                    }}
-                                    className="border border-gray-200 px-6 py-3 rounded-2xl font-Manrope text-center block w-full"
-                                >
-                                    Sair
-                                </button>
-                            ) : (
-                                <a
-                                    href="/login"
-                                    onClick={() => setIsOpen(false)}
-                                    className="border border-gray-200 px-6 py-3 rounded-2xl font-Manrope text-center block"
-                                >
-                                    Entrar
-                                </a>
-                            )}
                             <a
                                 href="/admin"
                                 onClick={() => setIsOpen(false)}
