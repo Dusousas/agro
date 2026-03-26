@@ -29,12 +29,17 @@ create table if not exists subscriptions (
     customer_id integer not null references customers(id) on delete cascade,
     plan_id integer not null references plans(id),
     status text not null default 'Ativa',
+    delivery_status text not null default 'Pendente',
     basket_profile text,
     delivery_day text,
     delivery_window text,
+    last_delivery_update timestamptz,
     next_delivery_date date,
     created_at timestamptz not null default now()
 );
+
+alter table subscriptions add column if not exists delivery_status text not null default 'Pendente';
+alter table subscriptions add column if not exists last_delivery_update timestamptz;
 
 create table if not exists subscription_items (
     id serial primary key,

@@ -57,6 +57,22 @@ export type FinanceRow = {
     value: string;
 };
 
+export type DeliveryRecord = {
+    id: number;
+    customerName: string;
+    email: string;
+    city: string;
+    addressLine: string;
+    addressReference: string;
+    planName: string;
+    basketProfile: string;
+    deliveryDate: string;
+    deliveryDateRaw: string;
+    deliveryWindow: string;
+    deliveryDay: string;
+    status: string;
+};
+
 export type CustomerDashboardData = {
     availablePlans: PlanRecord[];
     selectedPlanName: string;
@@ -92,6 +108,7 @@ export type AdminDashboardData = {
     financeRows: FinanceRow[];
     couponRows: CouponRecord[];
     subscriptionRows: SubscriptionSummaryRecord[];
+    deliveryRows: DeliveryRecord[];
     overviewAlerts: string[];
     shortcuts: string[];
 };

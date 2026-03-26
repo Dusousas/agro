@@ -157,7 +157,10 @@ export async function getAdminDashboardData(): Promise<AdminDashboardData> {
     try {
         const db = getDb();
 
-        const [clientsResult, plansResult, couponsResult, financeResult] = await Promise.all([
+        await db.query(`alter table subscriptions add column if not exists delivery_status text not null default 'Pendente'`);
+        await db.query(`alter table subscriptions add column if not exists last_delivery_update timestamptz`);
+
+        const [clientsResult, plansResult, couponsResult, financeResult, deliveriesResult] = await Promise.all([
             db.query(`
                 select c.id, c.name, c.email, c.city, p.name as plan, s.status
                 from customers c
@@ -193,6 +196,28 @@ export async function getAdminDashboardData(): Promise<AdminDashboardData> {
                 join subscriptions s on s.id = py.subscription_id
                 join customers c on c.id = s.customer_id
                 where coalesce(c.is_admin, false) = false
+            `),
+            db.query(`
+                select
+                    s.id,
+                    c.name,
+                    c.email,
+                    coalesce(c.city, 'Brotas') as city,
+                    coalesce(c.address_line, '') as address_line,
+                    coalesce(c.address_reference, '') as address_reference,
+                    p.name as plan_name,
+                    coalesce(s.basket_profile, c.basket_profile, 'Selecao da estacao') as basket_profile,
+                    s.next_delivery_date,
+                    coalesce(s.delivery_window, c.delivery_window, '8h as 12h') as delivery_window,
+                    coalesce(s.delivery_day, c.delivery_day, 'Segunda-feira') as delivery_day,
+                    coalesce(s.delivery_status, 'Pendente') as delivery_status
+                from subscriptions s
+                join customers c on c.id = s.customer_id
+                join plans p on p.id = s.plan_id
+                where coalesce(c.is_admin, false) = false
+                  and s.next_delivery_date is not null
+                order by s.next_delivery_date asc, c.name asc
+                limit 100
             `),
         ]);
 
@@ -237,6 +262,28 @@ export async function getAdminDashboardData(): Promise<AdminDashboardData> {
             }))
             : adminDashboardMock.subscriptionRows;
 
+        const deliveryRows = deliveriesResult.rows.length
+            ? deliveriesResult.rows.map((row) => ({
+                id: row.id,
+                customerName: row.name,
+                email: row.email ?? '',
+                city: row.city ?? 'Brotas',
+                addressLine: row.address_line ?? '',
+                addressReference: row.address_reference ?? '',
+                planName: row.plan_name ?? 'Sem plano',
+                basketProfile: row.basket_profile ?? 'Selecao da estacao',
+                deliveryDate: row.next_delivery_date
+                    ? new Date(row.next_delivery_date).toLocaleDateString('pt-BR')
+                    : '',
+                deliveryDateRaw: row.next_delivery_date
+                    ? new Date(row.next_delivery_date).toISOString().slice(0, 10)
+                    : '',
+                deliveryWindow: row.delivery_window ?? '8h as 12h',
+                deliveryDay: row.delivery_day ?? '',
+                status: row.delivery_status ?? 'Pendente',
+            }))
+            : adminDashboardMock.deliveryRows;
+
         const activeClients = registeredClients.filter((client) => client.status === 'Ativa').length;
         const activeCoupons = couponRows.filter((coupon) => coupon.status === 'Ativo').length;
 
@@ -245,6 +292,7 @@ export async function getAdminDashboardData(): Promise<AdminDashboardData> {
             financeRows,
             couponRows,
             subscriptionRows,
+            deliveryRows,
             overviewAlerts: [
                 `${registeredClients.filter((client) => client.status !== 'Ativa').length} clientes aguardando ajuste de status`,
                 `${activeCoupons} cupons ativos no sistema`,

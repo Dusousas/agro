@@ -88,6 +88,11 @@ export const adminDashboardMock: AdminDashboardData = {
         { id: 2, slug: 'cesta-colheita', plan: 'Cesta Colheita', monthlyPriceValue: 215.64, monthlyPrice: 'R$ 215,64', description: 'Plano com mais variedade e alta recorrencia.', subscribers: '12 clientes', renewals: '5 hoje' },
         { id: 3, slug: 'cesta-santa-cruz', plan: 'Cesta Santa Cruz', monthlyPriceValue: 305.64, monthlyPrice: 'R$ 305,64', description: 'Plano premium com maior volume.', subscribers: '5 clientes', renewals: '2 hoje' },
     ],
+    deliveryRows: [
+        { id: 1, customerName: 'Maria Oliveira', email: 'maria@exemplo.com', city: 'Brotas', addressLine: 'Rua exemplo, 120', addressReference: 'Portao branco', planName: 'Cesta Colheita', basketProfile: 'Mais folhas', deliveryDate: '28/03/2026', deliveryDateRaw: '2026-03-28', deliveryWindow: '8h as 12h', deliveryDay: 'Sabado', status: 'Em separacao' },
+        { id: 2, customerName: 'Lucas Ferreira', email: 'lucas@exemplo.com', city: 'Brotas', addressLine: 'Avenida central, 58', addressReference: 'Casa azul', planName: 'Cesta Broto', basketProfile: 'Selecao da estacao', deliveryDate: '28/03/2026', deliveryDateRaw: '2026-03-28', deliveryWindow: '12h as 16h', deliveryDay: 'Sabado', status: 'Pendente' },
+        { id: 3, customerName: 'Rafael Costa', email: 'rafael@exemplo.com', city: 'Sao Carlos', addressLine: 'Rua das Palmeiras, 300', addressReference: 'Apto 14', planName: 'Cesta Santa Cruz', basketProfile: 'Mais variedade', deliveryDate: '29/03/2026', deliveryDateRaw: '2026-03-29', deliveryWindow: '8h as 12h', deliveryDay: 'Domingo', status: 'Enviado' },
+    ],
     overviewAlerts: [
         '3 clientes aguardando confirmacao de pagamento',
         '2 cupons tiveram uso acima da media hoje',
