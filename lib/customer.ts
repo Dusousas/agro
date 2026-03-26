@@ -25,6 +25,13 @@ export type SubscriptionPlanOption = {
     items: string[];
 };
 
+type PersistedPlanInput = {
+    slug: string;
+    name: string;
+    monthlyPrice: number;
+    description: string;
+};
+
 export async function getCustomerByEmail(email: string): Promise<CustomerOnboardingData | null> {
     if (!email || !isDatabaseConfigured()) return null;
 
@@ -156,10 +163,52 @@ export async function getActivePlans(): Promise<SubscriptionPlanOption[]> {
     }));
 }
 
-export async function saveCustomerPlan(email: string, planId: number) {
-    if (!email || !planId || !isDatabaseConfigured()) return;
+export async function saveCustomerPlan(email: string, planInput: PersistedPlanInput) {
+    if (!email || !planInput.slug || !isDatabaseConfigured()) return false;
 
     const db = getDb();
+
+    let planId: number | undefined;
+
+    const existingPlanResult = await db.query(
+        `
+        select id
+        from plans
+        where slug = $1
+        limit 1
+        `,
+        [planInput.slug]
+    );
+
+    if (existingPlanResult.rows.length) {
+        planId = existingPlanResult.rows[0]?.id;
+
+        await db.query(
+            `
+            update plans
+            set
+                name = $2,
+                monthly_price = $3,
+                description = $4,
+                active = true
+            where id = $1
+            `,
+            [planId, planInput.name, planInput.monthlyPrice, planInput.description]
+        );
+    } else {
+        const insertPlanResult = await db.query(
+            `
+            insert into plans (slug, name, monthly_price, description, active)
+            values ($1, $2, $3, $4, true)
+            returning id
+            `,
+            [planInput.slug, planInput.name, planInput.monthlyPrice, planInput.description]
+        );
+
+        planId = insertPlanResult.rows[0]?.id;
+    }
+
+    if (!planId) return false;
 
     const customerResult = await db.query(
         `
@@ -173,7 +222,7 @@ export async function saveCustomerPlan(email: string, planId: number) {
 
     const customer = customerResult.rows[0];
     const customerId = customer?.id;
-    if (!customerId) return;
+    if (!customerId) return false;
 
     const preferenceResult = await db.query(
         `
@@ -219,7 +268,7 @@ export async function saveCustomerPlan(email: string, planId: number) {
         subscriptionId = insertResult.rows[0]?.id;
     }
 
-    if (!subscriptionId) return;
+    if (!subscriptionId) return false;
 
     await db.query(
         `
@@ -283,6 +332,8 @@ export async function saveCustomerPlan(email: string, planId: number) {
             [subscriptionId, Number(plan?.monthly_price ?? 0)]
         );
     }
+
+    return true;
 }
 
 function getPlanItemsByName(planName?: string): string[] {

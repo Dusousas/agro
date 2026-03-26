@@ -18,18 +18,34 @@ const formatCurrency = (value: number) =>
 export default function Assinaturas({ plans, selectedPlanName }: AssinaturasProps) {
   const [selectedPlanId, setSelectedPlanId] = useState<number>(plans[0]?.id ?? 0);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
   const selectedPlan = plans.find((plan) => plan.id === selectedPlanId) ?? plans[0];
 
   async function handleContinue() {
-    if (!selectedPlanId) return;
+    if (!selectedPlanId || !selectedPlan) return;
     setLoading(true);
+    setError('');
 
-    await fetch('/api/subscription/select', {
+    const response = await fetch('/api/subscription/select', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ planId: selectedPlanId }),
+      body: JSON.stringify({
+        plan: {
+          slug: selectedPlan.slug,
+          name: selectedPlan.name,
+          monthlyPrice: selectedPlan.monthlyPrice,
+          description: selectedPlan.description,
+        },
+      }),
     });
+
+    if (!response.ok) {
+      const data = await response.json().catch(() => null);
+      setError(data?.message ?? 'Nao foi possivel concluir o pedido agora.');
+      setLoading(false);
+      return;
+    }
 
     window.location.href = '/painel';
   }
@@ -115,6 +131,7 @@ export default function Assinaturas({ plans, selectedPlanName }: AssinaturasProp
               >
                 {loading ? 'Finalizando pedido...' : 'Finalizar pedido e entrar no painel'}
               </button>
+              {error ? <p className='mt-3 text-sm text-red-500'>{error}</p> : null}
             </aside>
           </div>
         </div>
