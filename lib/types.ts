@@ -66,6 +66,23 @@ export type FinanceRow = {
     value: string;
 };
 
+export type FinanceChartPoint = {
+    label: string;
+    paid: number;
+    pending: number;
+};
+
+export type FinanceTransactionRecord = {
+    id: number;
+    customerName: string;
+    planName: string;
+    referenceMonth: string;
+    amount: string;
+    method: string;
+    status: string;
+    dueDate: string;
+};
+
 export type DeliveryRecord = {
     id: number;
     customerName: string;
@@ -122,6 +139,8 @@ export type CustomerDashboardData = {
 export type AdminDashboardData = {
     registeredClients: ClientRecord[];
     financeRows: FinanceRow[];
+    financeChart: FinanceChartPoint[];
+    financeTransactions: FinanceTransactionRecord[];
     couponRows: CouponRecord[];
     subscriptionRows: SubscriptionSummaryRecord[];
     deliveryRows: DeliveryRecord[];

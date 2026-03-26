@@ -82,6 +82,20 @@ export const adminDashboardMock: AdminDashboardData = {
         { label: 'Pagamentos pendentes', value: 'R$ 431,28' },
         { label: 'Ticket medio', value: 'R$ 226,25' },
     ],
+    financeChart: [
+        { label: 'Nov', paid: 4120, pending: 280 },
+        { label: 'Dez', paid: 4650, pending: 120 },
+        { label: 'Jan', paid: 4890, pending: 340 },
+        { label: 'Fev', paid: 5210, pending: 180 },
+        { label: 'Mar', paid: 5430, pending: 431.28 },
+        { label: 'Abr', paid: 3880, pending: 620 },
+    ],
+    financeTransactions: [
+        { id: 1, customerName: 'Maria Oliveira', planName: 'Cesta Colheita', referenceMonth: 'Marco', amount: 'R$ 215,64', method: 'PIX', status: 'Pago', dueDate: '25/03/2026' },
+        { id: 2, customerName: 'Lucas Ferreira', planName: 'Cesta Broto', referenceMonth: 'Marco', amount: 'R$ 143,64', method: 'Cartao', status: 'Pendente', dueDate: '26/03/2026' },
+        { id: 3, customerName: 'Rafael Costa', planName: 'Cesta Santa Cruz', referenceMonth: 'Marco', amount: 'R$ 305,64', method: 'Cartao', status: 'Pago', dueDate: '24/03/2026' },
+        { id: 4, customerName: 'Carla Mendes', planName: 'Cesta Santa Cruz', referenceMonth: 'Marco', amount: 'R$ 305,64', method: 'PIX', status: 'Pendente', dueDate: '28/03/2026' },
+    ],
     couponRows: [
         { id: 1, code: 'BROTAS10', status: 'Ativo', usageCount: 12, usage: '12 usos', discount: '10% off' },
         { id: 2, code: 'HORTA5', status: 'Ativo', usageCount: 8, usage: '8 usos', discount: '5% off' },

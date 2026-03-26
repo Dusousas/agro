@@ -10,6 +10,11 @@ function formatMoney(value: number | string | null | undefined) {
     }).format(amount);
 }
 
+function formatMonthLabel(value?: string | null) {
+    if (!value) return '--';
+    return new Date(`${value}-01T00:00:00`).toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '');
+}
+
 export async function getCustomerDashboardData(email?: string): Promise<CustomerDashboardData> {
     if (!isDatabaseConfigured()) {
         return customerDashboardMock;
@@ -165,7 +170,7 @@ export async function getAdminDashboardData(): Promise<AdminDashboardData> {
             )
         `);
 
-        const [clientsResult, plansResult, couponsResult, financeResult, deliveriesResult, planItemsResult] = await Promise.all([
+        const [clientsResult, plansResult, couponsResult, financeResult, deliveriesResult, planItemsResult, financeChartResult, financeTransactionsResult] = await Promise.all([
             db.query(`
                 select
                     c.id,
@@ -248,6 +253,37 @@ export async function getAdminDashboardData(): Promise<AdminDashboardData> {
                 from plan_items
                 order by sort_order asc, id asc
             `),
+            db.query(`
+                select
+                    to_char(date_trunc('month', coalesce(py.due_date, py.created_at)), 'YYYY-MM') as month_key,
+                    coalesce(sum(case when py.status = 'Pago' then py.amount end), 0) as paid_total,
+                    coalesce(sum(case when py.status <> 'Pago' then py.amount end), 0) as pending_total
+                from payments py
+                join subscriptions s on s.id = py.subscription_id
+                join customers c on c.id = s.customer_id
+                where coalesce(c.is_admin, false) = false
+                  and coalesce(py.due_date, py.created_at::date) >= current_date - interval '180 day'
+                group by 1
+                order by 1 asc
+            `),
+            db.query(`
+                select
+                    py.id,
+                    c.name as customer_name,
+                    p.name as plan_name,
+                    py.reference_month,
+                    py.amount,
+                    py.method,
+                    py.status,
+                    py.due_date
+                from payments py
+                join subscriptions s on s.id = py.subscription_id
+                join customers c on c.id = s.customer_id
+                join plans p on p.id = s.plan_id
+                where coalesce(c.is_admin, false) = false
+                order by py.due_date desc nulls last, py.id desc
+                limit 12
+            `),
         ]);
 
         const registeredClients = clientsResult.rows.length
@@ -286,6 +322,27 @@ export async function getAdminDashboardData(): Promise<AdminDashboardData> {
                 discount: row.discount_text ?? 'Desconto',
             }))
             : adminDashboardMock.couponRows;
+
+        const financeChart = financeChartResult.rows.length
+            ? financeChartResult.rows.map((row) => ({
+                label: formatMonthLabel(row.month_key),
+                paid: Number(row.paid_total ?? 0),
+                pending: Number(row.pending_total ?? 0),
+            }))
+            : adminDashboardMock.financeChart;
+
+        const financeTransactions = financeTransactionsResult.rows.length
+            ? financeTransactionsResult.rows.map((row) => ({
+                id: row.id,
+                customerName: row.customer_name,
+                planName: row.plan_name ?? 'Sem plano',
+                referenceMonth: row.reference_month ?? '--',
+                amount: formatMoney(row.amount),
+                method: row.method ?? 'Nao informado',
+                status: row.status ?? 'Pendente',
+                dueDate: row.due_date ? new Date(row.due_date).toLocaleDateString('pt-BR') : '--',
+            }))
+            : adminDashboardMock.financeTransactions;
 
         const planItemsMap = new Map<number, string[]>();
         for (const row of planItemsResult.rows) {
@@ -337,6 +394,8 @@ export async function getAdminDashboardData(): Promise<AdminDashboardData> {
         return {
             registeredClients,
             financeRows,
+            financeChart,
+            financeTransactions,
             couponRows,
             subscriptionRows,
             deliveryRows,

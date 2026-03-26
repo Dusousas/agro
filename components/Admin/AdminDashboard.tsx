@@ -50,6 +50,7 @@ export default function AdminDashboard({ data }: AdminDashboardProps) {
     const [deliveryDate, setDeliveryDate] = useState('');
     const [deliveryStatus, setDeliveryStatus] = useState('');
     const [deliveryWeekday, setDeliveryWeekday] = useState('');
+    const [financeView, setFinanceView] = useState<'geral' | 'lancamentos'>('geral');
 
     useEffect(() => {
         setSelectedClient(data.registeredClients[0] ?? null);
@@ -69,6 +70,7 @@ export default function AdminDashboard({ data }: AdminDashboardProps) {
     const activeCoupons = useMemo(() => data.couponRows.filter((coupon) => coupon.status === 'Ativo').length, [data.couponRows]);
     const activeClients = useMemo(() => data.registeredClients.filter((client) => client.status === 'Ativa').length, [data.registeredClients]);
     const plansCount = useMemo(() => data.subscriptionRows.length, [data.subscriptionRows]);
+    const financeChartMax = useMemo(() => Math.max(...data.financeChart.map((item) => item.paid + item.pending), 1), [data.financeChart]);
 
     function openCouponModal(coupon?: CouponRecord) {
         const value = coupon ?? emptyCoupon;
@@ -229,8 +231,63 @@ export default function AdminDashboard({ data }: AdminDashboardProps) {
         if (activeTab === 'financeiro') {
             return (
                 <section className='grid gap-6'>
-                    <div className='rounded-[32px] bg-white p-6 shadow-md lg:p-8'><h2 className='text-3xl font-bold'>Financeiro</h2><p className='mt-2'>Metricas sem contas administrativas.</p><div className='mt-8 grid gap-4 md:grid-cols-3'>{data.financeRows.map((row) => <div key={row.label} className='rounded-2xl bg-gray-50 p-5'><p className='text-sm'>{row.label}</p><h3 className='mt-2 text-3xl font-bold'>{row.value}</h3></div>)}</div></div>
-                    <div className='rounded-[32px] bg-white p-6 shadow-md lg:p-8'><div className='flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between'><div><h3 className='text-2xl font-bold'>Fluxo recente</h3><p className='mt-2'>Alertas para revisar no caixa e na operacao.</p></div><button type='button' onClick={() => setActiveModal('financeiro')} className='rounded-2xl border border-gray-200 px-5 py-3 font-Manrope'>Ver resumo</button></div><div className='mt-8 grid gap-4'>{data.overviewAlerts.map((entry) => <div key={entry} className='rounded-2xl border border-gray-100 bg-gray-50 p-4'><p className='font-Manrope text-BlackH1'>{entry}</p></div>)}</div></div>
+                    <div className='rounded-[32px] bg-white p-6 shadow-md lg:p-8'>
+                        <div className='flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between'>
+                            <div><h2 className='text-3xl font-bold'>Financeiro</h2><p className='mt-2'>Metricas, historico e comportamento recente do caixa com base no banco.</p></div>
+                            <button type='button' onClick={() => setActiveModal('financeiro')} className='rounded-2xl border border-gray-200 px-5 py-3 font-Manrope'>Abrir painel completo</button>
+                        </div>
+                        <div className='mt-8 grid gap-4 md:grid-cols-3'>{data.financeRows.map((row) => <div key={row.label} className='rounded-2xl bg-gray-50 p-5'><p className='text-sm'>{row.label}</p><h3 className='mt-2 text-3xl font-bold'>{row.value}</h3></div>)}</div>
+                    </div>
+
+                    <div className='rounded-[32px] bg-white p-6 shadow-md lg:p-8'>
+                        <div className='flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between'>
+                            <div><h3 className='text-2xl font-bold'>Leitura financeira</h3><p className='mt-2'>Troque entre visao geral e cobrancas para aprofundar a analise.</p></div>
+                            <div className='flex flex-wrap gap-3'>
+                                <button type='button' onClick={() => setFinanceView('geral')} className={`rounded-full px-4 py-2 font-Manrope text-sm ${financeView === 'geral' ? 'bg-BlackMain text-white' : 'border border-gray-200'}`}>Visao geral</button>
+                                <button type='button' onClick={() => setFinanceView('lancamentos')} className={`rounded-full px-4 py-2 font-Manrope text-sm ${financeView === 'lancamentos' ? 'bg-BlackMain text-white' : 'border border-gray-200'}`}>Lancamentos</button>
+                            </div>
+                        </div>
+
+                        {financeView === 'geral' ? (
+                            <div className='mt-8 grid gap-6 xl:grid-cols-[1.1fr_0.9fr]'>
+                                <div className='rounded-[28px] border border-gray-100 bg-gray-50 p-5'>
+                                    <p className='text-sm'>Receita x pendencia nos ultimos meses</p>
+                                    <div className='mt-6 flex h-72 items-end gap-3'>
+                                        {data.financeChart.map((item) => {
+                                            const total = item.paid + item.pending;
+                                            const paidHeight = total ? `${Math.max((item.paid / financeChartMax) * 100, 8)}%` : '8%';
+                                            const pendingHeight = total ? `${Math.max((item.pending / financeChartMax) * 100, 4)}%` : '4%';
+                                            return (
+                                                <div key={item.label} className='flex flex-1 flex-col items-center gap-3'>
+                                                    <div className='flex h-full w-full items-end justify-center gap-1'>
+                                                        <div className='w-4 rounded-t-full bg-GreenP' style={{ height: paidHeight }} />
+                                                        <div className='w-4 rounded-t-full bg-YellowP' style={{ height: pendingHeight }} />
+                                                    </div>
+                                                    <span className='text-xs font-Manrope text-GrayP'>{item.label}</span>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                                <div className='grid gap-4'>
+                                    <div className='rounded-2xl border border-gray-100 bg-gray-50 p-5'><p className='text-sm'>Legenda</p><div className='mt-4 flex items-center gap-3'><span className='h-3 w-3 rounded-full bg-GreenP' /><p className='text-sm'>Receita confirmada</p></div><div className='mt-3 flex items-center gap-3'><span className='h-3 w-3 rounded-full bg-YellowP' /><p className='text-sm'>Receita pendente</p></div></div>
+                                    <div className='rounded-2xl border border-gray-100 bg-gray-50 p-5'><p className='text-sm'>Alertas</p><div className='mt-4 space-y-3'>{data.overviewAlerts.map((entry) => <div key={entry} className='rounded-2xl bg-white p-4'><p className='font-Manrope text-BlackH1'>{entry}</p></div>)}</div></div>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className='mt-8 grid gap-4'>
+                                {data.financeTransactions.map((item) => (
+                                    <div key={item.id} className='grid gap-3 rounded-2xl border border-gray-100 bg-gray-50 p-4 md:grid-cols-[1.1fr_0.9fr_0.8fr_0.8fr_0.7fr] md:items-center'>
+                                        <div><p className='text-sm'>Cliente</p><p className='font-Manrope font-semibold text-BlackH1'>{item.customerName}</p><p className='mt-1 text-sm'>{item.planName}</p></div>
+                                        <div><p className='text-sm'>Referencia</p><p className='font-Manrope font-semibold text-BlackH1'>{item.referenceMonth}</p><p className='mt-1 text-sm'>Vence em {item.dueDate}</p></div>
+                                        <div><p className='text-sm'>Valor</p><p className='font-Manrope font-semibold text-BlackH1'>{item.amount}</p></div>
+                                        <div><p className='text-sm'>Metodo</p><p className='font-Manrope font-semibold text-BlackH1'>{item.method}</p></div>
+                                        <div><p className='text-sm'>Status</p><span className={`mt-1 inline-flex rounded-full px-4 py-2 text-sm font-Manrope ${item.status === 'Pago' ? 'bg-GreenP/15 text-GreenP' : 'bg-YellowP/35 text-BlackH1'}`}>{item.status}</span></div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
                 </section>
             );
         }
@@ -299,7 +356,7 @@ export default function AdminDashboard({ data }: AdminDashboardProps) {
                 </div>
             </section>
         );
-    }, [activeClients, activeCoupons, activeTab, clientSearch, data, deliveryContent, plansCount, upcomingDeliveries]);
+    }, [activeClients, activeCoupons, activeTab, clientSearch, data, deliveryContent, financeChartMax, financeView, plansCount, upcomingDeliveries]);
 
     return (
         <main className='bgService min-h-[calc(100vh-92px)]'>
@@ -333,6 +390,27 @@ export default function AdminDashboard({ data }: AdminDashboardProps) {
 
             <PainelModal title='Relatorio financeiro' subtitle='Resumo do caixa' isOpen={activeModal === 'financeiro'} onClose={() => setActiveModal(null)}>
                 <div className='grid gap-4 md:grid-cols-3'>{data.financeRows.map((row) => <div key={row.label} className='rounded-2xl bg-gray-50 p-5'><p className='text-sm'>{row.label}</p><h3 className='mt-2 text-2xl font-bold'>{row.value}</h3></div>)}</div>
+                <div className='mt-8 rounded-[28px] border border-gray-100 bg-gray-50 p-5'>
+                    <p className='text-sm'>Comparativo mensal</p>
+                    <div className='mt-6 flex h-72 items-end gap-3'>
+                        {data.financeChart.map((item) => {
+                            const paidHeight = `${Math.max((item.paid / financeChartMax) * 100, 8)}%`;
+                            const pendingHeight = `${Math.max((item.pending / financeChartMax) * 100, 4)}%`;
+                            return (
+                                <div key={item.label} className='flex flex-1 flex-col items-center gap-3'>
+                                    <div className='flex h-full w-full items-end justify-center gap-1'>
+                                        <div className='w-4 rounded-t-full bg-GreenP' style={{ height: paidHeight }} />
+                                        <div className='w-4 rounded-t-full bg-YellowP' style={{ height: pendingHeight }} />
+                                    </div>
+                                    <span className='text-xs font-Manrope text-GrayP'>{item.label}</span>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+                <div className='mt-8 grid gap-4'>
+                    {data.financeTransactions.slice(0, 6).map((item) => <div key={item.id} className='rounded-2xl border border-gray-100 bg-gray-50 p-4'><div className='flex flex-col gap-2 md:flex-row md:items-center md:justify-between'><div><p className='text-sm'>Cliente</p><h3 className='mt-1 text-xl font-bold'>{item.customerName}</h3><p className='mt-1 text-sm'>{item.planName}</p></div><div><p className='text-sm'>Referencia</p><h3 className='mt-1 text-lg font-bold'>{item.referenceMonth}</h3><p className='mt-1 text-sm'>Vence em {item.dueDate}</p></div><div><p className='text-sm'>Valor</p><h3 className='mt-1 text-lg font-bold'>{item.amount}</h3></div><div><p className='text-sm'>Metodo</p><h3 className='mt-1 text-lg font-bold'>{item.method}</h3></div><span className={`inline-flex rounded-full px-4 py-2 text-sm font-Manrope ${item.status === 'Pago' ? 'bg-GreenP/15 text-GreenP' : 'bg-YellowP/35 text-BlackH1'}`}>{item.status}</span></div></div>)}
+                </div>
             </PainelModal>
 
             <PainelModal title={couponForm.id ? 'Editar cupom' : 'Novo cupom'} subtitle='Gestao de desconto' isOpen={activeModal === 'cupom'} onClose={() => setActiveModal(null)}>
