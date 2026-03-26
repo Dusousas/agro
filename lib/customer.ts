@@ -128,7 +128,7 @@ export async function saveCustomerOnboarding(email: string, payload: Omit<Custom
 }
 
 export async function getActivePlans(): Promise<SubscriptionPlanOption[]> {
-    if (!isDatabaseConfigured()) return [];
+    if (!isDatabaseConfigured()) return getDefaultPlans();
 
     const db = getDb();
     const result = await db.query(
@@ -140,7 +140,11 @@ export async function getActivePlans(): Promise<SubscriptionPlanOption[]> {
         `
     );
 
-    return result.rows.map((row, index) => ({
+    if (!result.rows.length) {
+        return getDefaultPlans();
+    }
+
+    return result.rows.slice(0, 3).map((row, index) => ({
         id: row.id,
         slug: row.slug ?? `plano-${row.id}`,
         name: row.name,
@@ -167,12 +171,13 @@ export async function saveCustomerPlan(email: string, planId: number) {
         [email]
     );
 
-    const customerId = customerResult.rows[0]?.id;
+    const customer = customerResult.rows[0];
+    const customerId = customer?.id;
     if (!customerId) return;
 
     const preferenceResult = await db.query(
         `
-        select id, basket_profile, delivery_day, delivery_window
+        select id
         from subscriptions
         where customer_id = $1
         order by id desc
@@ -181,8 +186,7 @@ export async function saveCustomerPlan(email: string, planId: number) {
         [customerId]
     );
 
-    const existingSubscription = preferenceResult.rows[0];
-    let subscriptionId = existingSubscription?.id;
+    let subscriptionId = preferenceResult.rows[0]?.id;
 
     if (subscriptionId) {
         await db.query(
@@ -206,14 +210,16 @@ export async function saveCustomerPlan(email: string, planId: number) {
             [
                 customerId,
                 planId,
-                customerResult.rows[0]?.basket_profile || 'Seleção da estação',
-                customerResult.rows[0]?.delivery_day || 'Segunda-feira',
-                customerResult.rows[0]?.delivery_window || '8h às 12h',
+                customer.basket_profile || 'Selecao da estacao',
+                customer.delivery_day || 'Segunda-feira',
+                customer.delivery_window || '8h as 12h',
             ]
         );
 
         subscriptionId = insertResult.rows[0]?.id;
     }
+
+    if (!subscriptionId) return;
 
     await db.query(
         `
@@ -226,13 +232,11 @@ export async function saveCustomerPlan(email: string, planId: number) {
         `,
         [
             subscriptionId,
-            customerResult.rows[0]?.basket_profile || 'Seleção da estação',
-            customerResult.rows[0]?.delivery_day || 'Segunda-feira',
-            customerResult.rows[0]?.delivery_window || '8h às 12h',
+            customer.basket_profile || 'Selecao da estacao',
+            customer.delivery_day || 'Segunda-feira',
+            customer.delivery_window || '8h as 12h',
         ]
     );
-
-    if (!subscriptionId) return;
 
     const planResult = await db.query(
         `
@@ -274,7 +278,7 @@ export async function saveCustomerPlan(email: string, planId: number) {
         await db.query(
             `
             insert into payments (subscription_id, reference_month, amount, method, status, due_date, paid_at)
-            values ($1, to_char(current_date, 'TMMonth'), $2, 'Cartão', 'Pago', current_date, now())
+            values ($1, to_char(current_date, 'TMMonth'), $2, 'Cartao', 'Pago', current_date, now())
             `,
             [subscriptionId, Number(plan?.monthly_price ?? 0)]
         );
@@ -283,12 +287,47 @@ export async function saveCustomerPlan(email: string, planId: number) {
 
 function getPlanItemsByName(planName?: string): string[] {
     if ((planName ?? '').toLowerCase().includes('broto')) {
-        return ['Alface crespa', 'Rúcula', 'Tomate', 'Cheiro-verde'];
+        return ['Alface crespa', 'Rucula', 'Tomate', 'Cheiro-verde'];
     }
 
     if ((planName ?? '').toLowerCase().includes('colheita')) {
-        return ['Alface crespa', 'Rúcula', 'Couve', 'Tomate', 'Cenoura', 'Cheiro-verde'];
+        return ['Alface crespa', 'Rucula', 'Couve', 'Tomate', 'Cenoura', 'Cheiro-verde'];
     }
 
-    return ['Alface americana', 'Rúcula', 'Couve', 'Brócolis', 'Tomate', 'Cenoura', 'Beterraba', 'Cheiro-verde'];
+    return ['Alface americana', 'Rucula', 'Couve', 'Brocolis', 'Tomate', 'Cenoura', 'Beterraba', 'Cheiro-verde'];
+}
+
+function getDefaultPlans(): SubscriptionPlanOption[] {
+    return [
+        {
+            id: 1,
+            slug: 'cesta-broto',
+            name: 'Cesta Broto',
+            monthlyPrice: 143.64,
+            weeklyPrice: 35.91,
+            description: 'Plano leve para quem quer comecar com uma selecao pratica de hortalias frescas toda semana.',
+            badge: 'Entrada mais leve',
+            items: ['Alface crespa', 'Rucula', 'Tomate', 'Cheiro-verde'],
+        },
+        {
+            id: 2,
+            slug: 'cesta-colheita',
+            name: 'Cesta Colheita',
+            monthlyPrice: 215.64,
+            weeklyPrice: 53.91,
+            description: 'Plano mais equilibrado para casas que cozinham com frequencia e querem variedade na semana.',
+            badge: 'Mais escolhido',
+            items: ['Alface crespa', 'Rucula', 'Couve', 'Tomate', 'Cenoura', 'Cheiro-verde'],
+        },
+        {
+            id: 3,
+            slug: 'cesta-santa-cruz',
+            name: 'Cesta Santa Cruz',
+            monthlyPrice: 305.64,
+            weeklyPrice: 76.41,
+            description: 'Plano mais completo, com volume reforcado e selecao especial para abastecer melhor a rotina.',
+            badge: 'Plano mais completo',
+            items: ['Alface americana', 'Rucula', 'Couve', 'Brocolis', 'Tomate', 'Cenoura', 'Beterraba', 'Cheiro-verde'],
+        },
+    ];
 }
