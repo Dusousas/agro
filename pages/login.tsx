@@ -9,7 +9,7 @@ export default function Login() {
       <section className='gradient2 py-20'>
         <div className='maxW'>
           <div className='max-w-2xl mx-auto bg-white rounded-[32px] shadow-md p-8 lg:p-12 text-center'>
-            <h6 className='text-xl'>Entrar na assinatura</h6>
+            <h6 className='text-xl'>Entrar na assinaturaa</h6>
             <h1 className='text-3xl lg:text-5xl font-bold mt-2'>Acesse seu painel com o Google.</h1>
             <p className='mt-4'>
               Faça login para acompanhar sua assinatura, completar seu cadastro e manter suas preferências salvas no sistema.
