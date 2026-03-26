@@ -48,7 +48,7 @@ export default function About() {
                         Nosso serviço em Brotas foi pensado para famílias, casais e pequenos comércios que querem manter a geladeira abastecida com verduras e legumes frescos sem perder tempo com compras repetidas.
                     </p>
                     <p className='mt-2'>
-                        Você escolhe o plano, acompanha o valor mensal e ainda aproveita desconto especial ao manter sua assinatura ativa no mês.
+                        Voce escolhe o plano, acompanha o valor mensal e ainda aproveita desconto especial ao manter sua assinatura ativa no mês.
                     </p>
                     <motion.div
                         initial={{ opacity: 0, y: 20 }}
