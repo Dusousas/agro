@@ -307,40 +307,40 @@ export default function AdminDashboard({ data }: AdminDashboardProps) {
             </PainelModal>
 
             <PainelModal title={planForm.id ? 'Editar plano' : 'Novo plano'} subtitle='Gestao das assinaturas' isOpen={activeModal === 'plano'} onClose={() => setActiveModal(null)}>
-                <div className='grid gap-6 xl:grid-cols-[1fr_0.95fr]'>
-                    <div className='grid gap-4'>
-                    <input className='rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 outline-0' value={planForm.plan} onChange={(event) => setPlanForm({ ...planForm, plan: event.target.value })} placeholder='Nome do plano' type='text' />
-                    <input className='rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 outline-0' value={planForm.badge ?? ''} onChange={(event) => setPlanForm({ ...planForm, badge: event.target.value })} placeholder='Badge do card, ex.: Mais escolhido' type='text' />
-                    <input className='rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 outline-0' value={planForm.slug} onChange={(event) => setPlanForm({ ...planForm, slug: event.target.value })} placeholder='Slug do plano' type='text' />
-                    <input className='rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 outline-0' value={planForm.monthlyPriceValue ?? 0} onChange={(event) => setPlanForm({ ...planForm, monthlyPriceValue: Number(event.target.value) })} placeholder='Valor mensal' type='number' min='0' step='0.01' />
-                    <textarea className='min-h-32 resize-none rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 outline-0' value={planForm.description ?? ''} onChange={(event) => setPlanForm({ ...planForm, description: event.target.value })} placeholder='Descricao do plano' />
-                    <textarea className='min-h-36 resize-none rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 outline-0' value={(planForm.items ?? []).join('\n')} onChange={(event) => setPlanForm({ ...planForm, items: event.target.value.split('\n').map((item) => item.trim()).filter(Boolean) })} placeholder={'Itens da assinatura, um por linha\nAlface crespa\nRucula\nTomate'} />
+                <div className='grid gap-8 xl:grid-cols-[1.05fr_1fr] xl:items-start'>
+                    <div className='grid gap-5'>
+                    <input className='rounded-[24px] border border-gray-200 bg-gray-50 px-5 py-4 text-lg outline-0' value={planForm.plan} onChange={(event) => setPlanForm({ ...planForm, plan: event.target.value })} placeholder='Nome do plano' type='text' />
+                    <input className='rounded-[24px] border border-gray-200 bg-gray-50 px-5 py-4 text-lg outline-0' value={planForm.badge ?? ''} onChange={(event) => setPlanForm({ ...planForm, badge: event.target.value })} placeholder='Badge do card, ex.: Mais escolhido' type='text' />
+                    <input className='rounded-[24px] border border-gray-200 bg-gray-50 px-5 py-4 text-lg outline-0' value={planForm.slug} onChange={(event) => setPlanForm({ ...planForm, slug: event.target.value })} placeholder='Slug do plano' type='text' />
+                    <input className='rounded-[24px] border border-gray-200 bg-gray-50 px-5 py-4 text-lg outline-0' value={planForm.monthlyPriceValue ?? 0} onChange={(event) => setPlanForm({ ...planForm, monthlyPriceValue: Number(event.target.value) })} placeholder='Valor mensal' type='number' min='0' step='0.01' />
+                    <textarea className='min-h-40 resize-none rounded-[24px] border border-gray-200 bg-gray-50 px-5 py-4 text-lg outline-0' value={planForm.description ?? ''} onChange={(event) => setPlanForm({ ...planForm, description: event.target.value })} placeholder='Descricao do plano' />
+                    <textarea className='min-h-48 resize-none rounded-[24px] border border-gray-200 bg-gray-50 px-5 py-4 text-lg outline-0' value={(planForm.items ?? []).join('\n')} onChange={(event) => setPlanForm({ ...planForm, items: event.target.value.split('\n').map((item) => item.trim()).filter(Boolean) })} placeholder={'Itens da assinatura, um por linha\nAlface crespa\nRucula\nTomate'} />
                     </div>
 
-                    <div className='rounded-[28px] border border-gray-200 bg-[#FCFCF8] p-6'>
+                    <div className='rounded-[32px] border border-gray-200 bg-[#FCFCF8] p-8 lg:p-10'>
                         <p className='text-sm uppercase tracking-[0.18em] text-GrayP'>Previa do card</p>
-                        <span className='mt-4 inline-block rounded-full bg-YellowP/20 px-4 py-2 text-sm font-Manrope text-BlackH1'>
+                        <span className='mt-6 inline-block rounded-full bg-YellowP/20 px-5 py-2.5 text-sm font-Manrope text-BlackH1'>
                             {planForm.badge || 'Badge do plano'}
                         </span>
-                        <h3 className='mt-5 text-2xl font-bold'>{planForm.plan || 'Nome do plano'}</h3>
-                        <p className='mt-3 min-h-[72px]'>{planForm.description || 'A descricao do plano aparecera aqui para o cliente comparar as opcoes.'}</p>
-                        <div className='mt-5'>
+                        <h3 className='mt-7 text-3xl font-bold'>{planForm.plan || 'Nome do plano'}</h3>
+                        <p className='mt-4 min-h-[112px] text-lg leading-8'>{planForm.description || 'A descricao do plano aparecera aqui para o cliente comparar as opcoes.'}</p>
+                        <div className='mt-7'>
                             <p className='text-sm uppercase tracking-[0.18em] text-GrayP'>Mensal</p>
-                            <h4 className='mt-2 text-3xl font-bold'>
+                            <h4 className='mt-3 text-5xl font-bold'>
                                 {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(planForm.monthlyPriceValue ?? 0))}
                             </h4>
-                            <p className='mt-2 text-sm'>
+                            <p className='mt-3 text-base'>
                                 ou {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number((Number(planForm.monthlyPriceValue ?? 0) / 4).toFixed(2)))} por cesta
                             </p>
                         </div>
-                        <div className='mt-5 space-y-2'>
+                        <div className='mt-8 space-y-3'>
                             {(planForm.items ?? []).slice(0, 6).map((item) => (
-                                <div key={item} className='flex items-start gap-2 text-sm'>
-                                    <span className='mt-1 h-2 w-2 shrink-0 rounded-full bg-GreenP' />
+                                <div key={item} className='flex items-start gap-3 text-base leading-7'>
+                                    <span className='mt-2 h-2.5 w-2.5 shrink-0 rounded-full bg-GreenP' />
                                     <span>{item}</span>
                                 </div>
                             ))}
-                            {!(planForm.items ?? []).length ? <p className='text-sm'>Os itens do plano vao aparecer aqui.</p> : null}
+                            {!(planForm.items ?? []).length ? <p className='text-base'>Os itens do plano vao aparecer aqui.</p> : null}
                         </div>
                     </div>
                 </div>
