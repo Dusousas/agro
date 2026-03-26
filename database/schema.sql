@@ -22,6 +22,7 @@ create table if not exists customers (
 alter table customers add column if not exists delivery_day text;
 alter table customers add column if not exists delivery_window text;
 alter table customers add column if not exists basket_profile text;
+alter table customers add column if not exists is_admin boolean not null default false;
 
 create table if not exists subscriptions (
     id serial primary key,

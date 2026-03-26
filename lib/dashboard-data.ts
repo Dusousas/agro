@@ -19,7 +19,7 @@ export async function getCustomerDashboardData(email?: string): Promise<Customer
         const db = getDb();
 
         const plansResult = await db.query(`
-            select name, monthly_price, description
+            select id, slug, name, monthly_price, description, active
             from plans
             where active = true
             order by monthly_price asc
@@ -86,9 +86,13 @@ export async function getCustomerDashboardData(email?: string): Promise<Customer
 
         return {
             availablePlans: plansResult.rows.map((row) => ({
+                id: row.id,
+                slug: row.slug ?? '',
                 name: row.name,
+                monthlyPriceValue: Number(row.monthly_price ?? 0),
                 monthlyPrice: formatMoney(row.monthly_price),
                 description: row.description,
+                active: Boolean(row.active),
             })),
             selectedPlanName: subscription.plan_name,
             nextBasket: itemsResult.rows.length
@@ -155,40 +159,48 @@ export async function getAdminDashboardData(): Promise<AdminDashboardData> {
 
         const [clientsResult, plansResult, couponsResult, financeResult] = await Promise.all([
             db.query(`
-                select c.name, c.city, p.name as plan, s.status
+                select c.id, c.name, c.email, c.city, p.name as plan, s.status
                 from customers c
                 left join subscriptions s on s.customer_id = c.id
                 left join plans p on p.id = s.plan_id
+                where coalesce(c.is_admin, false) = false
                 order by c.id desc
                 limit 20
             `),
             db.query(`
-                select p.name,
+                select p.id, p.slug, p.name, p.monthly_price, p.description,
                     count(s.id) as subscribers,
                     count(*) filter (where s.next_delivery_date = current_date) as renewals
                 from plans p
                 left join subscriptions s on s.plan_id = p.id
+                left join customers c on c.id = s.customer_id
+                where c.id is null or coalesce(c.is_admin, false) = false
                 group by p.id
                 order by p.monthly_price asc
             `),
             db.query(`
-                select code, status, usage_count, discount_text
+                select id, code, status, usage_count, discount_text
                 from coupons
                 order by id desc
                 limit 10
             `),
             db.query(`
                 select
-                    coalesce(sum(case when status = 'Pago' then amount end), 0) as confirmed_revenue,
-                    coalesce(sum(case when status <> 'Pago' then amount end), 0) as pending_revenue,
-                    coalesce(avg(amount), 0) as average_ticket
-                from payments
+                    coalesce(sum(case when py.status = 'Pago' then py.amount end), 0) as confirmed_revenue,
+                    coalesce(sum(case when py.status <> 'Pago' then py.amount end), 0) as pending_revenue,
+                    coalesce(avg(py.amount), 0) as average_ticket
+                from payments py
+                join subscriptions s on s.id = py.subscription_id
+                join customers c on c.id = s.customer_id
+                where coalesce(c.is_admin, false) = false
             `),
         ]);
 
         const registeredClients = clientsResult.rows.length
             ? clientsResult.rows.map((row) => ({
+                id: row.id,
                 name: row.name,
+                email: row.email,
                 plan: row.plan ?? 'Sem plano',
                 status: row.status ?? 'Pendente',
                 city: row.city ?? 'Brotas',
@@ -203,8 +215,10 @@ export async function getAdminDashboardData(): Promise<AdminDashboardData> {
 
         const couponRows = couponsResult.rows.length
             ? couponsResult.rows.map((row) => ({
+                id: row.id,
                 code: row.code,
                 status: row.status,
+                usageCount: Number(row.usage_count ?? 0),
                 usage: `${row.usage_count ?? 0} usos`,
                 discount: row.discount_text ?? 'Desconto',
             }))
@@ -212,7 +226,12 @@ export async function getAdminDashboardData(): Promise<AdminDashboardData> {
 
         const subscriptionRows = plansResult.rows.length
             ? plansResult.rows.map((row) => ({
+                id: row.id,
+                slug: row.slug ?? '',
                 plan: row.name,
+                monthlyPriceValue: Number(row.monthly_price ?? 0),
+                monthlyPrice: formatMoney(row.monthly_price),
+                description: row.description ?? '',
                 subscribers: `${row.subscribers ?? 0} clientes`,
                 renewals: `${row.renewals ?? 0} hoje`,
             }))

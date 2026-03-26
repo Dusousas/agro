@@ -1,21 +1,24 @@
 import { NextAuthOptions } from 'next-auth';
 import GoogleProvider from 'next-auth/providers/google';
 import { getDb, isDatabaseConfigured } from './db';
+import { isAdminEmail } from './admin';
 
 async function upsertCustomer(email?: string | null, name?: string | null) {
     if (!email || !isDatabaseConfigured()) return;
 
     const db = getDb();
+    const admin = isAdminEmail(email);
 
     await db.query(
         `
-        insert into customers (name, email, city)
-        values ($1, $2, 'Brotas - SP')
+        insert into customers (name, email, city, is_admin)
+        values ($1, $2, 'Brotas - SP', $3)
         on conflict (email)
         do update set
-            name = coalesce(excluded.name, customers.name)
+            name = coalesce(excluded.name, customers.name),
+            is_admin = excluded.is_admin
         `,
-        [name ?? 'Cliente', email]
+        [name ?? 'Cliente', email, admin]
     );
 }
 

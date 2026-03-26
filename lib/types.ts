@@ -1,7 +1,11 @@
 export type PlanRecord = {
+    id: number;
+    slug: string;
     name: string;
+    monthlyPriceValue: number;
     monthlyPrice: string;
     description: string;
+    active: boolean;
 };
 
 export type PaymentRecord = {
@@ -20,21 +24,30 @@ export type CardRecord = {
 };
 
 export type CouponRecord = {
+    id: number;
     code: string;
     status: string;
+    usageCount: number;
     usage: string;
     discount: string;
 };
 
 export type ClientRecord = {
+    id?: number;
     name: string;
+    email?: string;
     plan: string;
     status: string;
     city: string;
 };
 
 export type SubscriptionSummaryRecord = {
+    id: number;
+    slug: string;
     plan: string;
+    monthlyPriceValue?: number;
+    monthlyPrice?: string;
+    description?: string;
     subscribers: string;
     renewals: string;
 };
