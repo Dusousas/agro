@@ -68,10 +68,10 @@ export const customerDashboardMock: CustomerDashboardData = {
 
 export const adminDashboardMock: AdminDashboardData = {
     registeredClients: [
-        { id: 1, name: 'Maria Oliveira', email: 'maria@exemplo.com', plan: 'Cesta Colheita', status: 'Ativa', city: 'Brotas' },
-        { id: 2, name: 'Lucas Ferreira', email: 'lucas@exemplo.com', plan: 'Cesta Broto', status: 'Ativa', city: 'Brotas' },
-        { id: 3, name: 'Carla Mendes', email: 'carla@exemplo.com', plan: 'Cesta Santa Cruz', status: 'Pendente', city: 'Brotas' },
-        { id: 4, name: 'Rafael Costa', email: 'rafael@exemplo.com', plan: 'Cesta Colheita', status: 'Ativa', city: 'Brotas' },
+        { id: 1, name: 'Maria Oliveira', email: 'maria@exemplo.com', plan: 'Cesta Colheita', status: 'Ativa', city: 'Brotas', addressLine: 'Rua exemplo, 120', addressReference: 'Portao branco', deliveryDay: 'Sabado', deliveryWindow: '8h as 12h', basketProfile: 'Mais folhas', nextDeliveryDate: '28/03/2026', paymentStatus: 'Pago' },
+        { id: 2, name: 'Lucas Ferreira', email: 'lucas@exemplo.com', plan: 'Cesta Broto', status: 'Ativa', city: 'Brotas', addressLine: 'Avenida central, 58', addressReference: 'Casa azul', deliveryDay: 'Sabado', deliveryWindow: '12h as 16h', basketProfile: 'Selecao da estacao', nextDeliveryDate: '28/03/2026', paymentStatus: 'Pendente' },
+        { id: 3, name: 'Carla Mendes', email: 'carla@exemplo.com', plan: 'Cesta Santa Cruz', status: 'Pendente', city: 'Brotas', addressLine: 'Rua do pomar, 15', addressReference: 'Chacara', deliveryDay: 'Segunda-feira', deliveryWindow: '8h as 12h', basketProfile: 'Mais variedade', nextDeliveryDate: '31/03/2026', paymentStatus: 'Pendente' },
+        { id: 4, name: 'Rafael Costa', email: 'rafael@exemplo.com', plan: 'Cesta Colheita', status: 'Ativa', city: 'Brotas', addressLine: 'Rua das Palmeiras, 300', addressReference: 'Apto 14', deliveryDay: 'Domingo', deliveryWindow: '8h as 12h', basketProfile: 'Mais legumes', nextDeliveryDate: '29/03/2026', paymentStatus: 'Pago' },
     ],
     financeRows: [
         { label: 'Receita confirmada do mes', value: 'R$ 5.430,00' },
@@ -98,11 +98,5 @@ export const adminDashboardMock: AdminDashboardData = {
         '2 cupons tiveram uso acima da media hoje',
         '5 renovacoes da Cesta Colheita programadas',
         '1 cliente pediu alteracao de endereco',
-    ],
-    shortcuts: [
-        'Consultar cliente',
-        'Criar cupom promocional',
-        'Revisar cobrancas pendentes',
-        'Atualizar composicao das cestas',
     ],
 };

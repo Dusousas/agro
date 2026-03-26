@@ -39,6 +39,13 @@ export type ClientRecord = {
     plan: string;
     status: string;
     city: string;
+    addressLine?: string;
+    addressReference?: string;
+    deliveryDay?: string;
+    deliveryWindow?: string;
+    basketProfile?: string;
+    nextDeliveryDate?: string;
+    paymentStatus?: string;
 };
 
 export type SubscriptionSummaryRecord = {
@@ -112,5 +119,4 @@ export type AdminDashboardData = {
     subscriptionRows: SubscriptionSummaryRecord[];
     deliveryRows: DeliveryRecord[];
     overviewAlerts: string[];
-    shortcuts: string[];
 };

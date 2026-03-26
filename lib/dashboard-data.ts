@@ -172,7 +172,26 @@ export async function getAdminDashboardData(): Promise<AdminDashboardData> {
 
         const [clientsResult, plansResult, couponsResult, financeResult, deliveriesResult, planItemsResult] = await Promise.all([
             db.query(`
-                select c.id, c.name, c.email, c.city, p.name as plan, s.status
+                select
+                    c.id,
+                    c.name,
+                    c.email,
+                    c.city,
+                    c.address_line,
+                    c.address_reference,
+                    p.name as plan,
+                    s.status,
+                    coalesce(s.delivery_day, c.delivery_day, '') as delivery_day,
+                    coalesce(s.delivery_window, c.delivery_window, '') as delivery_window,
+                    coalesce(s.basket_profile, c.basket_profile, '') as basket_profile,
+                    s.next_delivery_date,
+                    (
+                        select py.status
+                        from payments py
+                        where py.subscription_id = s.id
+                        order by py.due_date desc nulls last, py.id desc
+                        limit 1
+                    ) as payment_status
                 from customers c
                 left join subscriptions s on s.customer_id = c.id
                 left join plans p on p.id = s.plan_id
@@ -244,6 +263,15 @@ export async function getAdminDashboardData(): Promise<AdminDashboardData> {
                 plan: row.plan ?? 'Sem plano',
                 status: row.status ?? 'Pendente',
                 city: row.city ?? 'Brotas',
+                addressLine: row.address_line ?? '',
+                addressReference: row.address_reference ?? '',
+                deliveryDay: row.delivery_day ?? '',
+                deliveryWindow: row.delivery_window ?? '',
+                basketProfile: row.basket_profile ?? '',
+                nextDeliveryDate: row.next_delivery_date
+                    ? new Date(row.next_delivery_date).toLocaleDateString('pt-BR')
+                    : '',
+                paymentStatus: row.payment_status ?? 'Sem registro',
             }))
             : adminDashboardMock.registeredClients;
 
@@ -323,7 +351,6 @@ export async function getAdminDashboardData(): Promise<AdminDashboardData> {
                 `${subscriptionRows.reduce((acc, row) => acc + Number(row.subscribers.split(' ')[0] || 0), 0)} assinaturas mapeadas`,
                 `${activeClients} clientes ativos carregados do banco`,
             ],
-            shortcuts: adminDashboardMock.shortcuts,
         };
     } catch {
         return adminDashboardMock;

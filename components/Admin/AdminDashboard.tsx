@@ -66,6 +66,9 @@ export default function AdminDashboard({ data }: AdminDashboardProps) {
     const upcomingDeliveries = useMemo(() => data.deliveryRows.filter((row) => row.status !== 'Entregue').length, [data.deliveryRows]);
     const sentDeliveries = useMemo(() => data.deliveryRows.filter((row) => row.status === 'Enviado' || row.status === 'Entregue').length, [data.deliveryRows]);
     const nextDeliveryDate = useMemo(() => data.deliveryRows[0]?.deliveryDate ?? '--', [data.deliveryRows]);
+    const activeCoupons = useMemo(() => data.couponRows.filter((coupon) => coupon.status === 'Ativo').length, [data.couponRows]);
+    const activeClients = useMemo(() => data.registeredClients.filter((client) => client.status === 'Ativa').length, [data.registeredClients]);
+    const plansCount = useMemo(() => data.subscriptionRows.length, [data.subscriptionRows]);
 
     function openCouponModal(coupon?: CouponRecord) {
         const value = coupon ?? emptyCoupon;
@@ -217,7 +220,7 @@ export default function AdminDashboard({ data }: AdminDashboardProps) {
                         <div className='w-full lg:max-w-sm'><input className='w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 outline-0' placeholder='Pesquisar cliente' type='text' value={clientSearch} onChange={(event) => setClientSearch(event.target.value)} /></div>
                     </div>
                     <div className='mt-8 grid gap-4'>
-                        {filteredClients.map((client) => <button key={`${client.id}-${client.email}`} type='button' onClick={() => { setSelectedClient(client); setActiveModal('clienteDetalhe'); }} className='grid gap-3 rounded-2xl border border-gray-100 bg-gray-50 p-4 text-left md:grid-cols-[1.2fr_1fr_0.9fr_0.9fr_auto] md:items-center'><div><p className='text-sm'>Cliente</p><p className='font-Manrope font-semibold text-BlackH1'>{client.name}</p><p className='mt-1 text-sm'>{client.email}</p></div><div><p className='text-sm'>Plano</p><p className='font-Manrope font-semibold text-BlackH1'>{client.plan}</p></div><div><p className='text-sm'>Status</p><span className={`mt-1 inline-flex rounded-full px-4 py-2 text-sm font-Manrope ${client.status === 'Ativa' ? 'bg-GreenP/15 text-GreenP' : 'bg-YellowP/35 text-BlackH1'}`}>{client.status}</span></div><div><p className='text-sm'>Cidade</p><p className='font-Manrope font-semibold text-BlackH1'>{client.city}</p></div><span className='font-Manrope text-GreenP'>Abrir</span></button>)}
+                        {filteredClients.map((client) => <button key={`${client.id}-${client.email}`} type='button' onClick={() => { setSelectedClient(client); setActiveModal('clienteDetalhe'); }} className='grid gap-3 rounded-2xl border border-gray-100 bg-gray-50 p-4 text-left md:grid-cols-[1.2fr_1fr_0.9fr_0.9fr_0.9fr_auto] md:items-center'><div><p className='text-sm'>Cliente</p><p className='font-Manrope font-semibold text-BlackH1'>{client.name}</p><p className='mt-1 text-sm'>{client.email}</p></div><div><p className='text-sm'>Plano</p><p className='font-Manrope font-semibold text-BlackH1'>{client.plan}</p></div><div><p className='text-sm'>Status</p><span className={`mt-1 inline-flex rounded-full px-4 py-2 text-sm font-Manrope ${client.status === 'Ativa' ? 'bg-GreenP/15 text-GreenP' : 'bg-YellowP/35 text-BlackH1'}`}>{client.status}</span></div><div><p className='text-sm'>Cidade</p><p className='font-Manrope font-semibold text-BlackH1'>{client.city}</p></div><div><p className='text-sm'>Proxima entrega</p><p className='font-Manrope font-semibold text-BlackH1'>{client.nextDeliveryDate || '--'}</p></div><span className='font-Manrope text-GreenP'>Abrir</span></button>)}
                     </div>
                 </section>
             );
@@ -260,11 +263,43 @@ export default function AdminDashboard({ data }: AdminDashboardProps) {
                 </div>
                 <div className='grid gap-6 xl:grid-cols-[1.1fr_0.9fr]'>
                     <div className='rounded-[32px] bg-white p-6 shadow-md lg:p-8'><div className='flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between'><div><h2 className='text-3xl font-bold'>Visao operacional</h2><p className='mt-2'>Resumo do que precisa de atencao agora.</p></div><button type='button' onClick={() => setActiveModal('overview')} className='rounded-2xl bg-YellowP px-6 py-3 font-Manrope'>Atualizar dados</button></div><div className='mt-8 grid gap-4 md:grid-cols-2'>{data.overviewAlerts.map((item) => <button key={item} type='button' onClick={() => setActiveModal('overview')} className='rounded-2xl bg-gray-50 p-5 text-left'><p className='font-Manrope text-BlackH1'>{item}</p></button>)}</div></div>
-                    <div className='rounded-[32px] bg-white p-6 shadow-md lg:p-8'><h2 className='text-3xl font-bold'>Atalhos de gestao</h2><div className='mt-8 space-y-4'>{data.shortcuts.map((shortcut) => <button key={shortcut} type='button' onClick={() => { if (shortcut === 'Consultar cliente') setActiveModal('clienteDetalhe'); if (shortcut === 'Criar cupom promocional') openCouponModal(); if (shortcut === 'Revisar cobrancas pendentes') setActiveModal('financeiro'); if (shortcut === 'Atualizar composicao das cestas') openPlanModal(); }} className='w-full rounded-2xl border border-gray-200 px-4 py-4 text-left transition-colors hover:border-GreenP/60'><span className='font-Manrope font-semibold text-BlackH1'>{shortcut}</span></button>)}<button type='button' onClick={() => setActiveTab('entregas')} className='w-full rounded-2xl border border-gray-200 px-4 py-4 text-left transition-colors hover:border-GreenP/60'><span className='font-Manrope font-semibold text-BlackH1'>Acompanhar entregas proximas</span></button></div></div>
+                    <div className='rounded-[32px] bg-white p-6 shadow-md lg:p-8'>
+                        <h2 className='text-3xl font-bold'>Acoes operacionais</h2>
+                        <p className='mt-2'>Acessos mais uteis para a rotina do admin, usando os dados reais carregados do sistema.</p>
+                        <div className='mt-8 grid gap-4'>
+                            <button type='button' onClick={() => setActiveTab('entregas')} className='rounded-2xl border border-gray-200 px-5 py-5 text-left transition-colors hover:border-GreenP/60 hover:bg-[#F7FAEF]'>
+                                <p className='text-sm'>Entregas pendentes</p>
+                                <h3 className='mt-2 text-2xl font-bold'>{upcomingDeliveries}</h3>
+                                <p className='mt-2 text-sm'>Veja as encomendas mais proximas e organize a producao.</p>
+                            </button>
+                            <button type='button' onClick={() => setActiveTab('clientes')} className='rounded-2xl border border-gray-200 px-5 py-5 text-left transition-colors hover:border-GreenP/60 hover:bg-[#F7FAEF]'>
+                                <p className='text-sm'>Clientes ativos</p>
+                                <h3 className='mt-2 text-2xl font-bold'>{activeClients}</h3>
+                                <p className='mt-2 text-sm'>Abra rapidamente a base de clientes e consulte dados cadastrais.</p>
+                            </button>
+                            <button type='button' onClick={() => setActiveTab('financeiro')} className='rounded-2xl border border-gray-200 px-5 py-5 text-left transition-colors hover:border-GreenP/60 hover:bg-[#F7FAEF]'>
+                                <p className='text-sm'>Financeiro</p>
+                                <h3 className='mt-2 text-2xl font-bold'>{data.financeRows[1]?.value ?? 'R$ 0,00'}</h3>
+                                <p className='mt-2 text-sm'>Acompanhe pagamentos pendentes e o caixa da operacao.</p>
+                            </button>
+                            <div className='grid gap-4 md:grid-cols-2'>
+                                <button type='button' onClick={() => openCouponModal()} className='rounded-2xl border border-gray-200 px-5 py-5 text-left transition-colors hover:border-GreenP/60 hover:bg-[#F7FAEF]'>
+                                    <p className='text-sm'>Cupons ativos</p>
+                                    <h3 className='mt-2 text-2xl font-bold'>{activeCoupons}</h3>
+                                    <p className='mt-2 text-sm'>Crie ou edite campanhas promocionais.</p>
+                                </button>
+                                <button type='button' onClick={() => setActiveTab('assinaturas')} className='rounded-2xl border border-gray-200 px-5 py-5 text-left transition-colors hover:border-GreenP/60 hover:bg-[#F7FAEF]'>
+                                    <p className='text-sm'>Planos cadastrados</p>
+                                    <h3 className='mt-2 text-2xl font-bold'>{plansCount}</h3>
+                                    <p className='mt-2 text-sm'>Revise preco, card e itens das assinaturas.</p>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </section>
         );
-    }, [activeTab, clientSearch, data, deliveryContent, upcomingDeliveries]);
+    }, [activeClients, activeCoupons, activeTab, clientSearch, data, deliveryContent, plansCount, upcomingDeliveries]);
 
     return (
         <main className='bgService min-h-[calc(100vh-92px)]'>
@@ -277,18 +312,22 @@ export default function AdminDashboard({ data }: AdminDashboardProps) {
                     </motion.div>
 
                     <div className='grid gap-6 xl:grid-cols-[320px_1fr]'>
-                        <AdminSidebar items={sidebarItems} activeTab={activeTab} onSelect={setActiveTab} />
+                        <AdminSidebar items={sidebarItems} activeTab={activeTab} onSelect={setActiveTab} activeClients={activeClients} upcomingDeliveries={upcomingDeliveries} activeCoupons={activeCoupons} pendingRevenue={data.financeRows[1]?.value ?? 'R$ 0,00'} />
                         <div>{content}</div>
                     </div>
                 </div>
             </section>
 
             <PainelModal title='Detalhes do cliente' subtitle='Consulta rapida' isOpen={activeModal === 'clienteDetalhe'} onClose={() => setActiveModal(null)}>
-                <div className='grid gap-4 md:grid-cols-2'>
+                <div className='grid gap-4 md:grid-cols-2 xl:grid-cols-3'>
                     <div className='rounded-2xl bg-gray-50 p-5'><p className='text-sm'>Cliente</p><h3 className='mt-2 text-2xl font-bold'>{selectedClient?.name ?? '--'}</h3></div>
                     <div className='rounded-2xl bg-gray-50 p-5'><p className='text-sm'>Email</p><h3 className='mt-2 break-all text-xl font-bold'>{selectedClient?.email ?? '--'}</h3></div>
                     <div className='rounded-2xl bg-gray-50 p-5'><p className='text-sm'>Plano atual</p><h3 className='mt-2 text-2xl font-bold'>{selectedClient?.plan ?? '--'}</h3></div>
                     <div className='rounded-2xl bg-gray-50 p-5'><p className='text-sm'>Status</p><h3 className='mt-2 text-2xl font-bold'>{selectedClient?.status ?? '--'}</h3></div>
+                    <div className='rounded-2xl bg-gray-50 p-5'><p className='text-sm'>Proxima entrega</p><h3 className='mt-2 text-2xl font-bold'>{selectedClient?.nextDeliveryDate ?? '--'}</h3><p className='mt-2 text-sm'>{selectedClient?.deliveryDay ?? '--'} - {selectedClient?.deliveryWindow ?? '--'}</p></div>
+                    <div className='rounded-2xl bg-gray-50 p-5'><p className='text-sm'>Pagamento</p><h3 className='mt-2 text-2xl font-bold'>{selectedClient?.paymentStatus ?? '--'}</h3><p className='mt-2 text-sm'>Ultimo status de cobranca encontrado.</p></div>
+                    <div className='rounded-2xl bg-gray-50 p-5 xl:col-span-2'><p className='text-sm'>Endereco</p><h3 className='mt-2 text-xl font-bold'>{selectedClient?.addressLine ?? '--'}</h3><p className='mt-2 text-sm'>{selectedClient?.city ?? '--'}{selectedClient?.addressReference ? ` - ${selectedClient.addressReference}` : ''}</p></div>
+                    <div className='rounded-2xl bg-gray-50 p-5'><p className='text-sm'>Perfil da cesta</p><h3 className='mt-2 text-xl font-bold'>{selectedClient?.basketProfile ?? '--'}</h3></div>
                 </div>
             </PainelModal>
 
