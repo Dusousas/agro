@@ -31,13 +31,12 @@ export default function Navbar() {
         return () => document.body.classList.remove("overflow-hidden");
     }, [isOpen]);
 
-    async function handlePrimaryAction() {
-        if (isLoggedIn) {
-            await signOut({ callbackUrl: "/" });
-            return;
-        }
-
+    async function handleMySubscription() {
         router.push("/painel");
+    }
+
+    async function handleLogout() {
+        await signOut({ callbackUrl: "/" });
     }
 
     return (
@@ -52,13 +51,24 @@ export default function Navbar() {
                         ))}
                     </ul>
 
-                    <button
-                        type="button"
-                        onClick={handlePrimaryAction}
-                        className="bg-YellowP px-5 py-3 rounded-2xl font-Manrope text-BlackH1"
-                    >
-                        {isLoggedIn ? "Sair" : "Minha assinatura"}
-                    </button>
+                    <div className="flex items-center gap-3">
+                        <button
+                            type="button"
+                            onClick={handleMySubscription}
+                            className="bg-YellowP px-5 py-3 rounded-2xl font-Manrope text-BlackH1"
+                        >
+                            Minha assinatura
+                        </button>
+                        {isLoggedIn ? (
+                            <button
+                                type="button"
+                                onClick={handleLogout}
+                                className="bg-red-500 px-5 py-3 rounded-2xl font-Manrope text-white"
+                            >
+                                Sair
+                            </button>
+                        ) : null}
+                    </div>
                 </div>
             </nav>
 
@@ -98,12 +108,24 @@ export default function Navbar() {
                                 type="button"
                                 onClick={async () => {
                                     setIsOpen(false);
-                                    await handlePrimaryAction();
+                                    await handleMySubscription();
                                 }}
                                 className="bg-YellowP px-6 py-3 rounded-2xl font-Manrope text-center block w-full"
                             >
-                                {isLoggedIn ? "Sair" : "Minha assinatura"}
+                                Minha assinatura
                             </button>
+                            {isLoggedIn ? (
+                                <button
+                                    type="button"
+                                    onClick={async () => {
+                                        setIsOpen(false);
+                                        await handleLogout();
+                                    }}
+                                    className="bg-red-500 px-6 py-3 rounded-2xl font-Manrope text-center block w-full text-white"
+                                >
+                                    Sair
+                                </button>
+                            ) : null}
                             <a
                                 href="/admin"
                                 onClick={() => setIsOpen(false)}

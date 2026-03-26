@@ -44,7 +44,7 @@ export async function getCustomerDashboardData(email?: string): Promise<Customer
             join customers c on c.id = s.customer_id
             join plans p on p.id = s.plan_id
             where ($1::text is null or c.email = $1)
-            order by s.created_at asc
+            order by s.created_at desc
             limit 1
         `, [email ?? null]);
 
@@ -141,7 +141,7 @@ export async function getCustomerDashboardData(email?: string): Promise<Customer
                     ? new Date(subscription.created_at).toLocaleDateString('pt-BR', { month: '2-digit', year: 'numeric' }).replace('/', '/')
                     : customerDashboardMock.customerSummary.since,
                 deliveriesCompleted: `${paymentsResult.rows.filter((row) => row.status === 'Pago').length} entregas registradas`,
-                lastUpdate: 'Dados vindos do banco',
+                lastUpdate: new Date().toLocaleDateString('pt-BR'),
             },
         };
     } catch {

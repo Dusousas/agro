@@ -21,7 +21,7 @@ export default function StatCard({
     dark = false,
     onClick,
 }: StatCardProps) {
-    const className = `w-full text-left rounded-[28px] shadow-md p-6 transition-all ${
+    const className = `flex h-full min-h-[260px] w-full flex-col text-left rounded-[28px] shadow-md p-6 transition-all ${
         dark
             ? 'bg-BlackMain hover:bg-BlackMain/95'
             : 'bg-white hover:-translate-y-1 hover:shadow-xl'
@@ -32,7 +32,7 @@ export default function StatCard({
             <Icon className={`text-4xl ${dark ? 'text-YellowP' : 'text-GreenP'}`} />
             <p className={`text-sm mt-5 ${dark ? 'text-white/70' : ''}`}>{title}</p>
             <h2 className={`text-2xl font-bold mt-1 ${dark ? 'text-white' : 'text-BlackH1'}`}>{value}</h2>
-            <p className={`mt-2 ${dark ? 'text-white/80' : ''}`}>{description}</p>
+            <p className={`mt-2 flex-1 ${dark ? 'text-white/80' : ''}`}>{description}</p>
             {onClick ? (
                 <span className={`inline-block mt-5 font-Manrope ${dark ? 'text-YellowP' : 'text-GreenP'}`}>
                     Abrir detalhes
@@ -46,6 +46,7 @@ export default function StatCard({
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay }}
+            className='h-full'
         >
             {onClick ? (
                 <button type='button' onClick={onClick} className={className}>

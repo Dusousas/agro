@@ -32,6 +32,15 @@ type PersistedPlanInput = {
     description: string;
 };
 
+export type CustomerDashboardUpdateInput = {
+    city: string;
+    addressLine: string;
+    addressReference: string;
+    deliveryDay: string;
+    deliveryWindow: string;
+    basketProfile: string;
+};
+
 export async function getCustomerByEmail(email: string): Promise<CustomerOnboardingData | null> {
     if (!email || !isDatabaseConfigured()) return null;
 
@@ -332,6 +341,53 @@ export async function saveCustomerPlan(email: string, planInput: PersistedPlanIn
             [subscriptionId, Number(plan?.monthly_price ?? 0)]
         );
     }
+
+    return true;
+}
+
+export async function updateCustomerDashboardProfile(email: string, payload: CustomerDashboardUpdateInput) {
+    if (!email || !isDatabaseConfigured()) return false;
+
+    const db = getDb();
+
+    const customerResult = await db.query(
+        `
+        update customers
+        set
+            city = $2,
+            address_line = $3,
+            address_reference = $4,
+            delivery_day = $5,
+            delivery_window = $6,
+            basket_profile = $7
+        where email = $1
+        returning id
+        `,
+        [
+            email,
+            payload.city,
+            payload.addressLine,
+            payload.addressReference,
+            payload.deliveryDay,
+            payload.deliveryWindow,
+            payload.basketProfile,
+        ]
+    );
+
+    const customerId = customerResult.rows[0]?.id;
+    if (!customerId) return false;
+
+    await db.query(
+        `
+        update subscriptions
+        set
+            basket_profile = $2,
+            delivery_day = $3,
+            delivery_window = $4
+        where customer_id = $1
+        `,
+        [customerId, payload.basketProfile, payload.deliveryDay, payload.deliveryWindow]
+    );
 
     return true;
 }
