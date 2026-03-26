@@ -37,6 +37,15 @@ export const getServerSideProps: GetServerSideProps<PainelProps> = async (contex
     };
   }
 
+  if (!customer.hasSubscription) {
+    return {
+      redirect: {
+        destination: "/assinaturas",
+        permanent: false,
+      },
+    };
+  }
+
   const data = await getCustomerDashboardData(session.user.email);
 
   return {

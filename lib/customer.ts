@@ -10,6 +10,19 @@ export type CustomerOnboardingData = {
     deliveryWindow: string;
     basketProfile: string;
     complete: boolean;
+    hasSubscription: boolean;
+    selectedPlanName?: string;
+};
+
+export type SubscriptionPlanOption = {
+    id: number;
+    slug: string;
+    name: string;
+    monthlyPrice: number;
+    weeklyPrice: number;
+    description: string;
+    badge: string;
+    items: string[];
 };
 
 export async function getCustomerByEmail(email: string): Promise<CustomerOnboardingData | null> {
@@ -24,11 +37,14 @@ export async function getCustomerByEmail(email: string): Promise<CustomerOnboard
             coalesce(c.city, '') as city,
             coalesce(c.address_line, '') as address_line,
             coalesce(c.address_reference, '') as address_reference,
+            s.id as subscription_id,
             coalesce(s.delivery_day, '') as delivery_day,
             coalesce(s.delivery_window, '') as delivery_window,
-            coalesce(s.basket_profile, '') as basket_profile
+            coalesce(s.basket_profile, '') as basket_profile,
+            p.name as plan_name
         from customers c
         left join subscriptions s on s.customer_id = c.id
+        left join plans p on p.id = s.plan_id
         where c.email = $1
         order by s.id desc nulls last
         limit 1
@@ -50,10 +66,12 @@ export async function getCustomerByEmail(email: string): Promise<CustomerOnboard
         deliveryWindow: row.delivery_window,
         basketProfile: row.basket_profile,
         complete: Boolean(row.city && row.address_line && row.delivery_day && row.delivery_window && row.basket_profile),
+        hasSubscription: Boolean(row.subscription_id),
+        selectedPlanName: row.plan_name ?? '',
     };
 }
 
-export async function saveCustomerOnboarding(email: string, payload: Omit<CustomerOnboardingData, 'email' | 'complete'>) {
+export async function saveCustomerOnboarding(email: string, payload: Omit<CustomerOnboardingData, 'email' | 'complete' | 'hasSubscription' | 'selectedPlanName'>) {
     if (!email || !isDatabaseConfigured()) return;
 
     const db = getDb();
@@ -80,25 +98,9 @@ export async function saveCustomerOnboarding(email: string, payload: Omit<Custom
         [customerId]
     );
 
-    let subscriptionId = existingSubscription.rows[0]?.id;
+    const subscriptionId = existingSubscription.rows[0]?.id;
 
-    if (!subscriptionId) {
-        const defaultPlan = await db.query(`select id from plans where active = true order by monthly_price asc limit 1`);
-        const planId = defaultPlan.rows[0]?.id;
-
-        if (planId) {
-            const insertSubscription = await db.query(
-                `
-                insert into subscriptions (customer_id, plan_id, status, basket_profile, delivery_day, delivery_window, next_delivery_date)
-                values ($1, $2, 'Ativa', $3, $4, $5, current_date + interval '7 day')
-                returning id
-                `,
-                [customerId, planId, payload.basketProfile, payload.deliveryDay, payload.deliveryWindow]
-            );
-
-            subscriptionId = insertSubscription.rows[0]?.id;
-        }
-    } else {
+    if (subscriptionId) {
         await db.query(
             `
             update subscriptions
@@ -111,4 +113,153 @@ export async function saveCustomerOnboarding(email: string, payload: Omit<Custom
             [subscriptionId, payload.basketProfile, payload.deliveryDay, payload.deliveryWindow]
         );
     }
+}
+
+export async function getActivePlans(): Promise<SubscriptionPlanOption[]> {
+    if (!isDatabaseConfigured()) return [];
+
+    const db = getDb();
+    const result = await db.query(
+        `
+        select id, slug, name, monthly_price, description
+        from plans
+        where active = true
+        order by monthly_price asc, id asc
+        `
+    );
+
+    return result.rows.map((row, index) => ({
+        id: row.id,
+        slug: row.slug ?? `plano-${row.id}`,
+        name: row.name,
+        monthlyPrice: Number(row.monthly_price ?? 0),
+        weeklyPrice: Number((Number(row.monthly_price ?? 0) / 4).toFixed(2)),
+        description: row.description,
+        badge: index === 0 ? 'Entrada mais leve' : index === 1 ? 'Mais escolhido' : 'Plano mais completo',
+        items: getPlanItemsByName(row.name),
+    }));
+}
+
+export async function saveCustomerPlan(email: string, planId: number) {
+    if (!email || !planId || !isDatabaseConfigured()) return;
+
+    const db = getDb();
+
+    const customerResult = await db.query(
+        `
+        select id
+        from customers
+        where email = $1
+        limit 1
+        `,
+        [email]
+    );
+
+    const customerId = customerResult.rows[0]?.id;
+    if (!customerId) return;
+
+    const preferenceResult = await db.query(
+        `
+        select id, basket_profile, delivery_day, delivery_window
+        from subscriptions
+        where customer_id = $1
+        order by id desc
+        limit 1
+        `,
+        [customerId]
+    );
+
+    const existingSubscription = preferenceResult.rows[0];
+    let subscriptionId = existingSubscription?.id;
+
+    if (subscriptionId) {
+        await db.query(
+            `
+            update subscriptions
+            set
+                plan_id = $2,
+                status = 'Ativa',
+                next_delivery_date = current_date + interval '7 day'
+            where id = $1
+            `,
+            [subscriptionId, planId]
+        );
+    } else {
+        const insertResult = await db.query(
+            `
+            insert into subscriptions (customer_id, plan_id, status, basket_profile, delivery_day, delivery_window, next_delivery_date)
+            values ($1, $2, 'Ativa', $3, $4, $5, current_date + interval '7 day')
+            returning id
+            `,
+            [
+                customerId,
+                planId,
+                'Seleção da estação',
+                'Segunda-feira',
+                '8h às 12h',
+            ]
+        );
+
+        subscriptionId = insertResult.rows[0]?.id;
+    }
+
+    if (!subscriptionId) return;
+
+    const planResult = await db.query(
+        `
+        select name, monthly_price
+        from plans
+        where id = $1
+        limit 1
+        `,
+        [planId]
+    );
+
+    const plan = planResult.rows[0];
+
+    await db.query(`delete from subscription_items where subscription_id = $1`, [subscriptionId]);
+
+    const items = getPlanItemsByName(plan?.name);
+    for (let index = 0; index < items.length; index += 1) {
+        await db.query(
+            `
+            insert into subscription_items (subscription_id, item_name, sort_order)
+            values ($1, $2, $3)
+            `,
+            [subscriptionId, items[index], index + 1]
+        );
+    }
+
+    const paymentCheck = await db.query(
+        `
+        select id
+        from payments
+        where subscription_id = $1
+          and reference_month = to_char(current_date, 'TMMonth')
+        limit 1
+        `,
+        [subscriptionId]
+    );
+
+    if (!paymentCheck.rows.length) {
+        await db.query(
+            `
+            insert into payments (subscription_id, reference_month, amount, method, status, due_date, paid_at)
+            values ($1, to_char(current_date, 'TMMonth'), $2, 'Cartão', 'Pago', current_date, now())
+            `,
+            [subscriptionId, Number(plan?.monthly_price ?? 0)]
+        );
+    }
+}
+
+function getPlanItemsByName(planName?: string): string[] {
+    if ((planName ?? '').toLowerCase().includes('broto')) {
+        return ['Alface crespa', 'Rúcula', 'Tomate', 'Cheiro-verde'];
+    }
+
+    if ((planName ?? '').toLowerCase().includes('colheita')) {
+        return ['Alface crespa', 'Rúcula', 'Couve', 'Tomate', 'Cenoura', 'Cheiro-verde'];
+    }
+
+    return ['Alface americana', 'Rúcula', 'Couve', 'Brócolis', 'Tomate', 'Cenoura', 'Beterraba', 'Cheiro-verde'];
 }
