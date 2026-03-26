@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import { useRouter } from 'next/router';
 import { motion } from 'framer-motion';
 import {
     FiCalendar,
@@ -38,8 +39,11 @@ type PainelDashboardProps = {
 };
 
 export default function PainelDashboard({ data }: PainelDashboardProps) {
+    const router = useRouter();
     const [selectedPlan, setSelectedPlan] = useState(data.selectedPlanName);
     const [activeModal, setActiveModal] = useState<ModalKey>(null);
+    const [savingPlan, setSavingPlan] = useState(false);
+    const [planFeedback, setPlanFeedback] = useState('');
 
     const paidSubscriptions = useMemo(
         () => data.paymentHistory.filter((payment) => payment.status === 'Pago').length,
@@ -53,6 +57,37 @@ export default function PainelDashboard({ data }: PainelDashboardProps) {
 
     const primaryCard = data.cards.find((card) => card.isPrimary) ?? data.cards[0];
     const secondaryCard = data.cards.find((card) => !card.isPrimary);
+
+    async function handlePlanChange() {
+        if (!currentPlan) return;
+
+        setSavingPlan(true);
+        setPlanFeedback('');
+
+        const response = await fetch('/api/subscription/select', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                plan: {
+                    slug: currentPlan.slug,
+                    name: currentPlan.name,
+                    monthlyPrice: currentPlan.monthlyPriceValue,
+                    description: currentPlan.description,
+                },
+            }),
+        });
+
+        if (!response.ok) {
+            const data = await response.json().catch(() => null);
+            setPlanFeedback(data?.message ?? 'Nao foi possivel trocar o plano agora.');
+            setSavingPlan(false);
+            return;
+        }
+
+        await router.replace(router.asPath);
+        setSavingPlan(false);
+        setActiveModal(null);
+    }
 
     return (
         <main className='bgService min-h-[calc(100vh-92px)]'>
@@ -212,7 +247,7 @@ export default function PainelDashboard({ data }: PainelDashboardProps) {
             </section>
 
             <PainelModal title='Alterar plano da assinatura' subtitle='Planos disponíveis' isOpen={activeModal === 'planos' || activeModal === 'alterarPlano'} onClose={() => setActiveModal(null)}>
-                <p>Escolha outro pacote para a assinatura. Quando o backend estiver completo, esta troca pode salvar direto no banco.</p>
+                <p>Escolha outro pacote para a assinatura. Essa alteracao ja salva direto no banco e atualiza o painel.</p>
                 <div className='grid gap-4 mt-8'>
                     {data.availablePlans.map((plan) => {
                         const isCurrent = currentPlan?.name === plan.name;
@@ -227,6 +262,10 @@ export default function PainelDashboard({ data }: PainelDashboardProps) {
                         );
                     })}
                 </div>
+                {planFeedback ? <p className='mt-4 text-sm text-red-500'>{planFeedback}</p> : null}
+                <button type='button' onClick={handlePlanChange} disabled={savingPlan || !currentPlan} className='mt-8 bg-YellowP px-6 py-3 rounded-2xl font-Manrope disabled:opacity-70'>
+                    {savingPlan ? 'Salvando plano...' : 'Confirmar novo plano'}
+                </button>
             </PainelModal>
 
             <PainelModal title='Detalhes do plano atual' subtitle='Resumo da assinatura' isOpen={activeModal === 'planoAtual'} onClose={() => setActiveModal(null)}>
