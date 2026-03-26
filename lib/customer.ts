@@ -495,6 +495,28 @@ export async function updateCustomerDashboardProfile(email: string, payload: Cus
     return true;
 }
 
+export async function confirmCustomerDelivery(email: string) {
+    if (!email || !isDatabaseConfigured()) return false;
+
+    const db = getDb();
+    const result = await db.query(
+        `
+        update subscriptions s
+        set
+            delivery_status = 'Entregue',
+            last_delivery_update = now()
+        from customers c
+        where c.id = s.customer_id
+          and c.email = $1
+          and coalesce(c.is_admin, false) = false
+        returning s.id
+        `,
+        [email]
+    );
+
+    return Boolean(result.rows[0]?.id);
+}
+
 function getPlanItemsByName(planName?: string): string[] {
     if ((planName ?? '').toLowerCase().includes('broto')) {
         return ['Alface crespa', 'Rucula', 'Tomate', 'Cheiro-verde'];

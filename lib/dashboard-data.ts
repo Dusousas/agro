@@ -29,6 +29,7 @@ export async function getCustomerDashboardData(email?: string): Promise<Customer
             select
                 s.id,
                 s.status,
+                coalesce(s.delivery_status, 'Pendente') as delivery_status,
                 s.next_delivery_date,
                 s.delivery_window,
                 s.delivery_day,
@@ -62,19 +63,12 @@ export async function getCustomerDashboardData(email?: string): Promise<Customer
         `, [subscription.id]);
 
         const paymentsResult = await db.query(`
-            select reference_month, status, amount, method
+            select reference_month, status, amount, method, due_date
             from payments
             where subscription_id = $1
             order by due_date desc nulls last, id desc
             limit 4
         `, [subscription.id]);
-
-        const cardsResult = await db.query(`
-            select brand, last4, exp_month, exp_year, is_primary
-            from cards
-            where customer_id = $1
-            order by is_primary desc, id asc
-        `, [subscription.customer_id]);
 
         const couponResult = await db.query(`
             select code, discount_text
@@ -106,15 +100,6 @@ export async function getCustomerDashboardData(email?: string): Promise<Customer
                     method: row.method,
                 }))
                 : customerDashboardMock.paymentHistory,
-            cards: cardsResult.rows.length
-                ? cardsResult.rows.map((row) => ({
-                    brand: row.brand,
-                    last4: row.last4,
-                    expMonth: String(row.exp_month).padStart(2, '0'),
-                    expYear: String(row.exp_year),
-                    isPrimary: row.is_primary,
-                }))
-                : customerDashboardMock.cards,
             appliedCoupon: couponResult.rows[0]
                 ? {
                     code: couponResult.rows[0].code,
@@ -129,12 +114,22 @@ export async function getCustomerDashboardData(email?: string): Promise<Customer
             },
             subscription: {
                 status: subscription.status ?? customerDashboardMock.subscription.status,
+                deliveryStatus: subscription.delivery_status ?? customerDashboardMock.subscription.deliveryStatus,
                 nextDeliveryDate: subscription.next_delivery_date
                     ? new Date(subscription.next_delivery_date).toLocaleDateString('pt-BR')
                     : customerDashboardMock.subscription.nextDeliveryDate,
                 deliveryWindow: subscription.delivery_window ?? customerDashboardMock.subscription.deliveryWindow,
                 deliveryDay: subscription.delivery_day ?? customerDashboardMock.subscription.deliveryDay,
                 basketProfile: subscription.basket_profile ?? customerDashboardMock.subscription.basketProfile,
+            },
+            paymentSummary: {
+                latestStatus: paymentsResult.rows[0]?.status ?? customerDashboardMock.paymentSummary.latestStatus,
+                latestAmount: paymentsResult.rows[0] ? formatMoney(paymentsResult.rows[0].amount) : customerDashboardMock.paymentSummary.latestAmount,
+                latestMethod: paymentsResult.rows[0]?.method ?? customerDashboardMock.paymentSummary.latestMethod,
+                nextDueDate: paymentsResult.rows[0]?.due_date
+                    ? new Date(paymentsResult.rows[0].due_date).toLocaleDateString('pt-BR')
+                    : customerDashboardMock.paymentSummary.nextDueDate,
+                openPayments: paymentsResult.rows.filter((row) => row.status !== 'Pago').length,
             },
             customerSummary: {
                 since: subscription.created_at

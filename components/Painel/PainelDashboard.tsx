@@ -2,7 +2,7 @@ import React, { useMemo, useState } from "react";
 import { useRouter } from "next/router";
 import { signOut } from "next-auth/react";
 import { motion } from "framer-motion";
-import { FiCalendar, FiCheckCircle, FiCreditCard, FiLogOut, FiMapPin, FiPackage, FiRefreshCcw, FiSliders } from "react-icons/fi";
+import { FiCalendar, FiCheckCircle, FiLogOut, FiMapPin, FiPackage, FiRefreshCcw, FiSliders, FiTruck } from "react-icons/fi";
 import { CustomerDashboardData } from "@/lib/types";
 import PainelModal from "./PainelModal";
 import StatCard from "./StatCard";
@@ -11,8 +11,7 @@ type ModalKey =
     | "planos"
     | "planoAtual"
     | "proximaEntrega"
-    | "cartoes"
-    | "novoCartao"
+    | "acompanharEntrega"
     | "pagamentos"
     | "status"
     | "endereco"
@@ -35,6 +34,7 @@ type PainelDashboardProps = {
 };
 
 const quickActions = [
+    { key: "acompanharEntrega" as const, title: "Acompanhar entrega", description: "Veja o status atualizado da sua entrega e confirme quando receber.", icon: FiTruck },
     { key: "alterarPlano" as const, title: "Alterar plano", description: "Troque sua assinatura por outro pacote sem sair do painel.", icon: FiRefreshCcw },
     { key: "atualizarEndereco" as const, title: "Atualizar endereco", description: "Edite local, referencia e instrucoes da sua entrega.", icon: FiMapPin },
     { key: "preferenciasCesta" as const, title: "Preferencias da cesta", description: "Ajuste perfil da cesta, dia e janela da sua entrega.", icon: FiSliders },
@@ -48,6 +48,8 @@ export default function PainelDashboard({ data }: PainelDashboardProps) {
     const [planFeedback, setPlanFeedback] = useState("");
     const [savingProfile, setSavingProfile] = useState(false);
     const [profileFeedback, setProfileFeedback] = useState("");
+    const [deliveryFeedback, setDeliveryFeedback] = useState("");
+    const [confirmingDelivery, setConfirmingDelivery] = useState(false);
     const [profileForm, setProfileForm] = useState<ProfileFormState>({
         city: data.customer.city,
         addressLine: data.customer.addressLine,
@@ -59,8 +61,6 @@ export default function PainelDashboard({ data }: PainelDashboardProps) {
 
     const paidSubscriptions = useMemo(() => data.paymentHistory.filter((payment) => payment.status === "Pago").length, [data.paymentHistory]);
     const currentPlan = useMemo(() => data.availablePlans.find((plan) => plan.name === selectedPlan) ?? data.availablePlans[0], [data.availablePlans, selectedPlan]);
-    const primaryCard = data.cards.find((card) => card.isPrimary) ?? data.cards[0];
-    const secondaryCard = data.cards.find((card) => !card.isPrimary);
 
     function updateProfileField<K extends keyof ProfileFormState>(field: K, value: ProfileFormState[K]) {
         setProfileForm((current) => ({ ...current, [field]: value }));
@@ -115,6 +115,26 @@ export default function PainelDashboard({ data }: PainelDashboardProps) {
 
         await router.replace(router.asPath);
         setSavingProfile(false);
+        setActiveModal(null);
+    }
+
+    async function handleConfirmDelivery() {
+        setConfirmingDelivery(true);
+        setDeliveryFeedback("");
+
+        const response = await fetch("/api/customer/confirm-delivery", {
+            method: "POST",
+        });
+
+        if (!response.ok) {
+            const responseData = await response.json().catch(() => null);
+            setDeliveryFeedback(responseData?.message ?? "Nao foi possivel confirmar o recebimento agora.");
+            setConfirmingDelivery(false);
+            return;
+        }
+
+        await router.replace(router.asPath);
+        setConfirmingDelivery(false);
         setActiveModal(null);
     }
 
@@ -183,7 +203,7 @@ export default function PainelDashboard({ data }: PainelDashboardProps) {
                     <div className="mt-12 grid gap-6 md:grid-cols-2 xl:grid-cols-4">
                         <StatCard title="Plano atual" value={currentPlan?.name ?? "Sem plano"} description="Assinatura mensal ativa com entrega recorrente." icon={FiPackage} delay={0.05} onClick={() => setActiveModal("planoAtual")} />
                         <StatCard title="Proxima entrega" value={data.subscription.nextDeliveryDate} description={`${profileForm.deliveryWindow} em ${profileForm.city}.`} icon={FiCalendar} delay={0.1} onClick={() => setActiveModal("proximaEntrega")} />
-                        <StatCard title="Meus cartoes" value={`${data.cards.length} cartoes`} description="Salve os cartoes usados na cobranca recorrente do servico." icon={FiCreditCard} delay={0.15} onClick={() => setActiveModal("cartoes")} />
+                        <StatCard title="Status da entrega" value={data.subscription.deliveryStatus} description="Acompanhe aqui o andamento da sua cesta antes da entrega." icon={FiTruck} delay={0.15} onClick={() => setActiveModal("acompanharEntrega")} />
                         <StatCard title="Status da assinatura" value={data.subscription.status} description="Seu plano esta ativo e pronto para a proxima entrega." icon={FiCheckCircle} delay={0.2} dark onClick={() => setActiveModal("status")} />
                     </div>
 
@@ -244,7 +264,7 @@ export default function PainelDashboard({ data }: PainelDashboardProps) {
                             <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between"><div><h2 className="text-2xl font-bold">Historico de pagamentos</h2><p className="mt-2">Uma visao rapida dos ultimos ciclos da assinatura.</p></div><button type="button" onClick={() => setActiveModal("pagamentos")} className="rounded-2xl border border-gray-200 px-5 py-3 font-Manrope">Abrir detalhes</button></div>
                             <div className="mt-8 grid gap-4">
                                 <div className="grid gap-4 md:grid-cols-2">
-                                    <button type="button" onClick={() => setActiveModal("cartoes")} className="rounded-2xl bg-[#F7FAEF] p-5 text-left"><p className="text-sm">Cartao da cobranca</p><h3 className="mt-2 text-2xl font-bold">{primaryCard ? `${primaryCard.brand} final ${primaryCard.last4}` : "Sem cartao"}</h3><p className="mt-2 text-sm">Usado na assinatura recorrente.</p><span className="mt-4 inline-block font-Manrope text-GreenP">Gerenciar cartoes</span></button>
+                                    <button type="button" onClick={() => setActiveModal("pagamentos")} className="rounded-2xl bg-[#F7FAEF] p-5 text-left"><p className="text-sm">Status da cobranca</p><h3 className="mt-2 text-2xl font-bold">{data.paymentSummary.latestStatus}</h3><p className="mt-2 text-sm">{data.paymentSummary.latestMethod} - {data.paymentSummary.latestAmount}</p><span className="mt-4 inline-block font-Manrope text-GreenP">Ver financeiro</span></button>
                                     <div className="rounded-2xl bg-[#FFF8DE] p-5"><p className="text-sm">Cupom de desconto</p><h3 className="mt-2 text-2xl font-bold">{data.appliedCoupon.code}</h3><p className="mt-2 text-sm">{data.appliedCoupon.description}</p></div>
                                 </div>
                                 {data.paymentHistory.map((payment) => (
@@ -283,24 +303,48 @@ export default function PainelDashboard({ data }: PainelDashboardProps) {
                 <div className="space-y-4"><div className="rounded-2xl bg-gray-50 p-5"><p className="text-sm">Data prevista</p><h3 className="mt-2 text-2xl font-bold">{data.subscription.nextDeliveryDate}</h3></div><div className="rounded-2xl bg-gray-50 p-5"><p className="text-sm">Janela de entrega</p><h3 className="mt-2 text-2xl font-bold">{profileForm.deliveryWindow}</h3></div><div className="rounded-2xl bg-gray-50 p-5"><p className="text-sm">Observacao</p><h3 className="mt-2 text-xl font-bold">Entrega residencial em {profileForm.city}</h3></div></div>
             </PainelModal>
 
-            <PainelModal title="Meus cartoes" subtitle="Cobranca da assinatura" isOpen={activeModal === "cartoes"} onClose={() => setActiveModal(null)}>
-                <div className="grid gap-4">
-                    {primaryCard ? <div className="rounded-[24px] bg-BlackMain p-5 text-white"><p className="text-sm text-white/70">Cartao principal</p><h3 className="mt-3 text-2xl font-bold">{primaryCard.brand} final {primaryCard.last4}</h3><p className="mt-2 text-white/80">Expira em {primaryCard.expMonth}/{primaryCard.expYear}</p><span className="mt-4 inline-block font-Manrope text-YellowP">Usado para a cobranca recorrente</span></div> : null}
-                    {secondaryCard ? <div className="rounded-[24px] border border-gray-200 p-5"><p className="text-sm">Cartao reserva</p><h3 className="mt-3 text-2xl font-bold">{secondaryCard.brand} final {secondaryCard.last4}</h3><p className="mt-2">Expira em {secondaryCard.expMonth}/{secondaryCard.expYear}</p></div> : null}
+            <PainelModal title="Acompanhamento da entrega" subtitle="Status atualizado" isOpen={activeModal === "acompanharEntrega"} onClose={() => setActiveModal(null)}>
+                <div className="grid gap-4 md:grid-cols-2">
+                    <div className="rounded-2xl bg-[#F7FAEF] p-5"><p className="text-sm">Status atual</p><h3 className="mt-2 text-2xl font-bold">{data.subscription.deliveryStatus}</h3><p className="mt-2 text-sm">O admin atualiza esse andamento conforme sua cesta avanca.</p></div>
+                    <div className="rounded-2xl bg-gray-50 p-5"><p className="text-sm">Entrega prevista</p><h3 className="mt-2 text-2xl font-bold">{data.subscription.nextDeliveryDate}</h3><p className="mt-2 text-sm">{data.subscription.deliveryDay} - {data.subscription.deliveryWindow}</p></div>
+                    <div className="rounded-2xl bg-gray-50 p-5"><p className="text-sm">Endereco</p><h3 className="mt-2 text-xl font-bold">{profileForm.addressLine}</h3><p className="mt-2 text-sm">{profileForm.city}{profileForm.addressReference ? ` - ${profileForm.addressReference}` : ""}</p></div>
+                    <div className="rounded-2xl bg-[#FFF8DE] p-5"><p className="text-sm">Perfil atual</p><h3 className="mt-2 text-xl font-bold">{profileForm.basketProfile}</h3><p className="mt-2 text-sm">Preferencia usada pelo time para montar sua cesta.</p></div>
                 </div>
-                <div className="mt-8 grid gap-4 md:grid-cols-2"><button type="button" onClick={() => setActiveModal("novoCartao")} className="rounded-2xl bg-YellowP px-6 py-3 font-Manrope">Adicionar novo cartao</button><button type="button" className="rounded-2xl border border-gray-200 px-6 py-3 font-Manrope">Definir cartao principal</button></div>
-            </PainelModal>
-
-            <PainelModal title="Adicionar cartao e cupom" subtitle="Nova forma de pagamento" isOpen={activeModal === "novoCartao"} onClose={() => setActiveModal(null)}>
-                <p>Espaco pronto para integrar cadastro de cartao e cupom no proximo passo.</p>
+                {deliveryFeedback ? <p className="mt-4 text-sm text-red-500">{deliveryFeedback}</p> : null}
+                {data.subscription.deliveryStatus === "Enviado" ? (
+                    <button type="button" onClick={handleConfirmDelivery} disabled={confirmingDelivery} className="mt-8 rounded-2xl bg-YellowP px-6 py-3 font-Manrope disabled:opacity-70">
+                        {confirmingDelivery ? "Confirmando recebimento..." : "Confirmar que recebi"}
+                    </button>
+                ) : null}
             </PainelModal>
 
             <PainelModal title="Pagamentos da assinatura" subtitle="Historico financeiro" isOpen={activeModal === "pagamentos"} onClose={() => setActiveModal(null)}>
-                <div className="grid gap-4 md:grid-cols-3"><div className="rounded-2xl bg-[#F7FAEF] p-5"><p className="text-sm">Meses pagos</p><h3 className="mt-2 text-3xl font-bold">{paidSubscriptions}</h3></div><div className="rounded-2xl bg-[#FFF8DE] p-5"><p className="text-sm">Em aberto</p><h3 className="mt-2 text-3xl font-bold">{data.paymentHistory.filter((payment) => payment.status !== "Pago").length}</h3></div><div className="rounded-2xl bg-gray-50 p-5"><p className="text-sm">Proximo valor</p><h3 className="mt-2 text-3xl font-bold">{currentPlan?.monthlyPrice}</h3></div></div>
+                <div className="grid gap-4 md:grid-cols-3">
+                    <div className="rounded-2xl bg-[#F7FAEF] p-5"><p className="text-sm">Meses pagos</p><h3 className="mt-2 text-3xl font-bold">{paidSubscriptions}</h3></div>
+                    <div className="rounded-2xl bg-[#FFF8DE] p-5"><p className="text-sm">Em aberto</p><h3 className="mt-2 text-3xl font-bold">{data.paymentSummary.openPayments}</h3></div>
+                    <div className="rounded-2xl bg-gray-50 p-5"><p className="text-sm">Proximo valor</p><h3 className="mt-2 text-3xl font-bold">{currentPlan?.monthlyPrice}</h3><p className="mt-2 text-sm">Vencimento em {data.paymentSummary.nextDueDate}</p></div>
+                </div>
+                <div className="mt-8 grid gap-4 md:grid-cols-2">
+                    <div className="rounded-2xl border border-gray-200 p-5"><p className="text-sm">Ultima cobranca</p><h3 className="mt-2 text-2xl font-bold">{data.paymentSummary.latestStatus}</h3><p className="mt-2">{data.paymentSummary.latestMethod} - {data.paymentSummary.latestAmount}</p></div>
+                    <div className="rounded-2xl border border-gray-200 p-5"><p className="text-sm">Cupom aplicado</p><h3 className="mt-2 text-2xl font-bold">{data.appliedCoupon.code}</h3><p className="mt-2">{data.appliedCoupon.description}</p></div>
+                </div>
+                <div className="mt-8 grid gap-4">
+                    {data.paymentHistory.map((payment) => (
+                        <div key={`${payment.month}-${payment.method}-${payment.status}`} className="rounded-2xl border border-gray-100 p-4">
+                            <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+                                <div><p className="text-sm">Referencia</p><h3 className="mt-1 text-xl font-bold">{payment.month}</h3></div>
+                                <div><p className="text-sm">Forma</p><h3 className="mt-1 text-lg font-bold">{payment.method}</h3></div>
+                                <div><p className="text-sm">Valor</p><h3 className="mt-1 text-lg font-bold">{payment.amount}</h3></div>
+                                <span className={`inline-flex rounded-full px-4 py-2 text-sm font-Manrope ${payment.status === "Pago" ? "bg-GreenP/15 text-GreenP" : "bg-YellowP/35 text-BlackH1"}`}>{payment.status}</span>
+                            </div>
+                        </div>
+                    ))}
+                </div>
             </PainelModal>
 
             <PainelModal title="Status geral da assinatura" subtitle="Resumo da conta" isOpen={activeModal === "status"} onClose={() => setActiveModal(null)}>
-                <div className="grid gap-4 md:grid-cols-3"><div className="rounded-2xl bg-[#F7FAEF] p-5"><p className="text-sm">Status atual</p><h3 className="mt-2 text-2xl font-bold">{data.subscription.status}</h3></div><div className="rounded-2xl bg-[#FFF8DE] p-5"><p className="text-sm">Cliente desde</p><h3 className="mt-2 text-2xl font-bold">{data.customerSummary.since}</h3></div><div className="rounded-2xl bg-gray-50 p-5"><p className="text-sm">Entregas realizadas</p><h3 className="mt-2 text-2xl font-bold">{data.customerSummary.deliveriesCompleted}</h3></div></div>
+                <div className="grid gap-4 md:grid-cols-3"><div className="rounded-2xl bg-[#F7FAEF] p-5"><p className="text-sm">Status atual</p><h3 className="mt-2 text-2xl font-bold">{data.subscription.status}</h3></div><div className="rounded-2xl bg-[#FFF8DE] p-5"><p className="text-sm">Entrega</p><h3 className="mt-2 text-2xl font-bold">{data.subscription.deliveryStatus}</h3></div><div className="rounded-2xl bg-gray-50 p-5"><p className="text-sm">Entregas realizadas</p><h3 className="mt-2 text-2xl font-bold">{data.customerSummary.deliveriesCompleted}</h3></div></div>
+                <div className="mt-8 rounded-2xl border border-gray-100 p-5"><p className="text-sm">Resumo util</p><h3 className="mt-2 text-xl font-bold">Cadastro e operacao sincronizados</h3><p className="mt-2">Endereco, preferencias de cesta e andamento da entrega ficam alinhados com o time no painel administrativo.</p></div>
             </PainelModal>
 
             <PainelModal title="Endereco da assinatura" subtitle="Dados de entrega" isOpen={activeModal === "endereco" || activeModal === "atualizarEndereco"} onClose={() => setActiveModal(null)}>

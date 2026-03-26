@@ -87,7 +87,6 @@ export type CustomerDashboardData = {
     selectedPlanName: string;
     nextBasket: string[];
     paymentHistory: PaymentRecord[];
-    cards: CardRecord[];
     appliedCoupon: {
         code: string;
         description: string;
@@ -100,10 +99,18 @@ export type CustomerDashboardData = {
     };
     subscription: {
         status: string;
+        deliveryStatus: string;
         nextDeliveryDate: string;
         deliveryWindow: string;
         deliveryDay: string;
         basketProfile: string;
+    };
+    paymentSummary: {
+        latestStatus: string;
+        latestAmount: string;
+        latestMethod: string;
+        nextDueDate: string;
+        openPayments: number;
     };
     customerSummary: {
         since: string;

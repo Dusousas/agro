@@ -38,10 +38,6 @@ export const customerDashboardMock: CustomerDashboardData = {
         { month: 'Marco', status: 'Pago', amount: 'R$ 215,64', method: 'PIX' },
         { month: 'Abril', status: 'Aberto', amount: 'R$ 215,64', method: 'Agendado' },
     ],
-    cards: [
-        { brand: 'Visa', last4: '4587', expMonth: '09', expYear: '28', isPrimary: true },
-        { brand: 'Mastercard', last4: '0321', expMonth: '01', expYear: '29', isPrimary: false },
-    ],
     appliedCoupon: {
         code: 'HORTA5',
         description: 'Aplicado para reduzir a proxima renovacao em 5%.',
@@ -54,10 +50,18 @@ export const customerDashboardMock: CustomerDashboardData = {
     },
     subscription: {
         status: 'Assinatura ativa',
+        deliveryStatus: 'Em separacao',
         nextDeliveryDate: '30 de marco',
         deliveryWindow: '8h as 12h',
         deliveryDay: 'Segunda-feira',
         basketProfile: 'Mais folhas',
+    },
+    paymentSummary: {
+        latestStatus: 'Aberto',
+        latestAmount: 'R$ 215,64',
+        latestMethod: 'Agendado',
+        nextDueDate: '30/03/2026',
+        openPayments: 1,
     },
     customerSummary: {
         since: 'Jan/2026',
