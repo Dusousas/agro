@@ -2,7 +2,8 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { isAdminEmail } from '@/lib/admin';
-import { getDb, isDatabaseConfigured } from '@/lib/db';
+import { isDatabaseConfigured } from '@/lib/db';
+import { savePlanCatalogEntry } from '@/lib/customer';
 
 function slugify(value: string) {
   return value
@@ -32,49 +33,35 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(405).json({ ok: false });
   }
 
-  const db = getDb();
   const id = Number(req.body.id ?? 0);
   const name = String(req.body.name ?? '').trim();
+  const badge = String(req.body.badge ?? '').trim();
   const description = String(req.body.description ?? '').trim();
   const monthlyPrice = Number(req.body.monthlyPrice ?? 0);
   const active = req.body.active !== false;
   const slug = String(req.body.slug ?? slugify(name)).trim() || slugify(name);
+  const items = Array.isArray(req.body.items)
+    ? req.body.items.map((item: unknown) => String(item ?? '').trim()).filter(Boolean)
+    : [];
 
   if (!name || !description || !monthlyPrice || !slug) {
     return res.status(400).json({ ok: false, message: 'Preencha nome, valor e descricao.' });
   }
 
-  if (req.method === 'PUT' && id) {
-    await db.query(
-      `
-      update plans
-      set
-        slug = $2,
-        name = $3,
-        monthly_price = $4,
-        description = $5,
-        active = $6
-      where id = $1
-      `,
-      [id, slug, name, monthlyPrice, description, active]
-    );
+  const saved = await savePlanCatalogEntry({
+    id: req.method === 'PUT' && id ? id : undefined,
+    slug,
+    name,
+    badge,
+    monthlyPrice,
+    description,
+    active,
+    items,
+  });
 
-    return res.status(200).json({ ok: true });
+  if (!saved) {
+    return res.status(400).json({ ok: false, message: 'Nao foi possivel salvar o plano.' });
   }
-
-  await db.query(
-    `
-    insert into plans (slug, name, monthly_price, description, active)
-    values ($1, $2, $3, $4, $5)
-    on conflict (slug)
-    do update set
-      name = excluded.name,
-      monthly_price = excluded.monthly_price,
-      description = excluded.description,
-      active = excluded.active
-    `,
-    [slug, name, monthlyPrice, description, active]
-  );
 
   return res.status(200).json({ ok: true });
 }

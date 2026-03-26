@@ -84,9 +84,9 @@ export const adminDashboardMock: AdminDashboardData = {
         { id: 3, code: 'FRESCOR15', status: 'Rascunho', usageCount: 0, usage: '0 usos', discount: '15% off' },
     ],
     subscriptionRows: [
-        { id: 1, slug: 'cesta-broto', plan: 'Cesta Broto', monthlyPriceValue: 143.64, monthlyPrice: 'R$ 143,64', description: 'Plano leve para rotinas menores.', subscribers: '7 clientes', renewals: '3 hoje' },
-        { id: 2, slug: 'cesta-colheita', plan: 'Cesta Colheita', monthlyPriceValue: 215.64, monthlyPrice: 'R$ 215,64', description: 'Plano com mais variedade e alta recorrencia.', subscribers: '12 clientes', renewals: '5 hoje' },
-        { id: 3, slug: 'cesta-santa-cruz', plan: 'Cesta Santa Cruz', monthlyPriceValue: 305.64, monthlyPrice: 'R$ 305,64', description: 'Plano premium com maior volume.', subscribers: '5 clientes', renewals: '2 hoje' },
+        { id: 1, slug: 'cesta-broto', badge: 'Entrada mais leve', plan: 'Cesta Broto', monthlyPriceValue: 143.64, monthlyPrice: 'R$ 143,64', description: 'Plano leve para rotinas menores.', items: ['Alface crespa', 'Rucula', 'Tomate', 'Cheiro-verde'], subscribers: '7 clientes', renewals: '3 hoje' },
+        { id: 2, slug: 'cesta-colheita', badge: 'Mais escolhido', plan: 'Cesta Colheita', monthlyPriceValue: 215.64, monthlyPrice: 'R$ 215,64', description: 'Plano com mais variedade e alta recorrencia.', items: ['Alface crespa', 'Rucula', 'Couve', 'Tomate', 'Cenoura', 'Cheiro-verde'], subscribers: '12 clientes', renewals: '5 hoje' },
+        { id: 3, slug: 'cesta-santa-cruz', badge: 'Plano mais completo', plan: 'Cesta Santa Cruz', monthlyPriceValue: 305.64, monthlyPrice: 'R$ 305,64', description: 'Plano premium com maior volume.', items: ['Alface americana', 'Rucula', 'Couve', 'Brocolis', 'Tomate', 'Cenoura', 'Beterraba', 'Cheiro-verde'], subscribers: '5 clientes', renewals: '2 hoje' },
     ],
     deliveryRows: [
         { id: 1, customerName: 'Maria Oliveira', email: 'maria@exemplo.com', city: 'Brotas', addressLine: 'Rua exemplo, 120', addressReference: 'Portao branco', planName: 'Cesta Colheita', basketProfile: 'Mais folhas', deliveryDate: '28/03/2026', deliveryDateRaw: '2026-03-28', deliveryWindow: '8h as 12h', deliveryDay: 'Sabado', status: 'Em separacao' },

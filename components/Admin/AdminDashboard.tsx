@@ -20,9 +20,10 @@ const sidebarItems = [
 ];
 
 const emptyCoupon: CouponRecord = { id: 0, code: '', status: 'Ativo', usageCount: 0, usage: '0 usos', discount: '' };
-const emptyPlan: SubscriptionSummaryRecord = { id: 0, slug: '', plan: '', monthlyPriceValue: 0, monthlyPrice: 'R$ 0,00', description: '', subscribers: '0 clientes', renewals: '0 hoje' };
+const emptyPlan: SubscriptionSummaryRecord = { id: 0, slug: '', plan: '', badge: '', monthlyPriceValue: 0, monthlyPrice: 'R$ 0,00', description: '', items: [], subscribers: '0 clientes', renewals: '0 hoje' };
 const emptyDelivery: DeliveryRecord = { id: 0, customerName: '', email: '', city: '', addressLine: '', addressReference: '', planName: '', basketProfile: '', deliveryDate: '', deliveryDateRaw: '', deliveryWindow: '', deliveryDay: '', status: 'Pendente' };
 const deliveryStatuses: DeliveryStatus[] = ['Pendente', 'Em separacao', 'Enviado', 'Entregue'];
+const weekdayOrder = ['Segunda-feira', 'Terca-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sabado', 'Domingo'];
 
 type AdminDashboardProps = {
     data: AdminDashboardData;
@@ -48,6 +49,7 @@ export default function AdminDashboard({ data }: AdminDashboardProps) {
     const [deliveryPlan, setDeliveryPlan] = useState('');
     const [deliveryDate, setDeliveryDate] = useState('');
     const [deliveryStatus, setDeliveryStatus] = useState('');
+    const [deliveryWeekday, setDeliveryWeekday] = useState('');
 
     useEffect(() => {
         setSelectedClient(data.registeredClients[0] ?? null);
@@ -60,6 +62,7 @@ export default function AdminDashboard({ data }: AdminDashboardProps) {
 
     const deliveryCities = useMemo(() => Array.from(new Set(data.deliveryRows.map((row) => row.city))).filter(Boolean), [data.deliveryRows]);
     const deliveryPlans = useMemo(() => Array.from(new Set(data.deliveryRows.map((row) => row.planName))).filter(Boolean), [data.deliveryRows]);
+    const deliveryWeekdays = useMemo(() => weekdayOrder.filter((day) => data.deliveryRows.some((row) => row.deliveryDay === day)), [data.deliveryRows]);
     const upcomingDeliveries = useMemo(() => data.deliveryRows.filter((row) => row.status !== 'Entregue').length, [data.deliveryRows]);
     const sentDeliveries = useMemo(() => data.deliveryRows.filter((row) => row.status === 'Enviado' || row.status === 'Entregue').length, [data.deliveryRows]);
     const nextDeliveryDate = useMemo(() => data.deliveryRows[0]?.deliveryDate ?? '--', [data.deliveryRows]);
@@ -111,7 +114,7 @@ export default function AdminDashboard({ data }: AdminDashboardProps) {
         const response = await fetch('/api/admin/plans', {
             method: planForm.id ? 'PUT' : 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ id: planForm.id, slug: planForm.slug, name: planForm.plan, monthlyPrice: planForm.monthlyPriceValue, description: planForm.description, active: true }),
+            body: JSON.stringify({ id: planForm.id, slug: planForm.slug, name: planForm.plan, badge: planForm.badge, monthlyPrice: planForm.monthlyPriceValue, description: planForm.description, items: planForm.items ?? [], active: true }),
         });
         if (!response.ok) {
             const responseData = await response.json().catch(() => null);
@@ -151,6 +154,7 @@ export default function AdminDashboard({ data }: AdminDashboardProps) {
                 && (!deliveryCity || row.city === deliveryCity)
                 && (!deliveryPlan || row.planName === deliveryPlan)
                 && (!deliveryDate || row.deliveryDateRaw === deliveryDate)
+                && (!deliveryWeekday || row.deliveryDay === deliveryWeekday)
                 && (!deliveryStatus || row.status === deliveryStatus);
         });
 
@@ -163,7 +167,11 @@ export default function AdminDashboard({ data }: AdminDashboardProps) {
                 </div>
 
                 <section className='rounded-[32px] bg-white p-6 shadow-md lg:p-8'>
-                    <div><h2 className='text-3xl font-bold'>Operacao de entregas</h2><p className='mt-2'>Filtre por nome, endereco, cidade, tipo de cesta, data e status.</p></div>
+                    <div><h2 className='text-3xl font-bold'>Operacao de entregas</h2><p className='mt-2'>A lista ja vem ordenada pelas encomendas mais proximas. Filtre por dia da semana, nome, endereco, cidade, cesta, data e status.</p></div>
+                    <div className='mt-6 flex flex-wrap gap-3'>
+                        <button type='button' onClick={() => setDeliveryWeekday('')} className={`rounded-full px-4 py-2 font-Manrope text-sm ${deliveryWeekday === '' ? 'bg-BlackMain text-white' : 'border border-gray-200 bg-white text-BlackH1'}`}>Todos os dias</button>
+                        {deliveryWeekdays.map((day) => <button key={day} type='button' onClick={() => setDeliveryWeekday(day)} className={`rounded-full px-4 py-2 font-Manrope text-sm ${deliveryWeekday === day ? 'bg-BlackMain text-white' : 'border border-gray-200 bg-white text-BlackH1'}`}>{day}</button>)}
+                    </div>
                     <div className='mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-5'>
                         <input className='rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 outline-0 xl:col-span-2' placeholder='Buscar por nome, endereco, cidade ou data' type='text' value={deliverySearch} onChange={(event) => setDeliverySearch(event.target.value)} />
                         <select className='rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 outline-0' value={deliveryCity} onChange={(event) => setDeliveryCity(event.target.value)}><option value=''>Todas as cidades</option>{deliveryCities.map((city) => <option key={city} value={city}>{city}</option>)}</select>
@@ -172,7 +180,7 @@ export default function AdminDashboard({ data }: AdminDashboardProps) {
                     </div>
                     <div className='mt-4 grid gap-4 md:grid-cols-[1fr_auto]'>
                         <select className='rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 outline-0' value={deliveryStatus} onChange={(event) => setDeliveryStatus(event.target.value)}><option value=''>Todos os status</option>{deliveryStatuses.map((status) => <option key={status} value={status}>{status}</option>)}</select>
-                        <button type='button' onClick={() => { setDeliverySearch(''); setDeliveryCity(''); setDeliveryPlan(''); setDeliveryDate(''); setDeliveryStatus(''); }} className='rounded-2xl border border-gray-200 px-5 py-3 font-Manrope'>Limpar filtros</button>
+                        <button type='button' onClick={() => { setDeliverySearch(''); setDeliveryCity(''); setDeliveryPlan(''); setDeliveryDate(''); setDeliveryStatus(''); setDeliveryWeekday(''); }} className='rounded-2xl border border-gray-200 px-5 py-3 font-Manrope'>Limpar filtros</button>
                     </div>
                     <div className='mt-8 grid gap-4'>
                         {filtered.map((delivery) => (
@@ -195,7 +203,7 @@ export default function AdminDashboard({ data }: AdminDashboardProps) {
                 </section>
             </section>
         );
-    }, [data.deliveryRows, deliveryCity, deliveryDate, deliveryPlan, deliverySearch, deliveryStatus, deliveryCities, deliveryPlans, nextDeliveryDate, sentDeliveries, upcomingDeliveries]);
+    }, [data.deliveryRows, deliveryCity, deliveryDate, deliveryPlan, deliverySearch, deliveryStatus, deliveryWeekday, deliveryCities, deliveryPlans, deliveryWeekdays, nextDeliveryDate, sentDeliveries, upcomingDeliveries]);
 
     const content = useMemo(() => {
         if (activeTab === 'entregas') return deliveryContent;
@@ -299,11 +307,42 @@ export default function AdminDashboard({ data }: AdminDashboardProps) {
             </PainelModal>
 
             <PainelModal title={planForm.id ? 'Editar plano' : 'Novo plano'} subtitle='Gestao das assinaturas' isOpen={activeModal === 'plano'} onClose={() => setActiveModal(null)}>
-                <div className='grid gap-4'>
+                <div className='grid gap-6 xl:grid-cols-[1fr_0.95fr]'>
+                    <div className='grid gap-4'>
                     <input className='rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 outline-0' value={planForm.plan} onChange={(event) => setPlanForm({ ...planForm, plan: event.target.value })} placeholder='Nome do plano' type='text' />
+                    <input className='rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 outline-0' value={planForm.badge ?? ''} onChange={(event) => setPlanForm({ ...planForm, badge: event.target.value })} placeholder='Badge do card, ex.: Mais escolhido' type='text' />
                     <input className='rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 outline-0' value={planForm.slug} onChange={(event) => setPlanForm({ ...planForm, slug: event.target.value })} placeholder='Slug do plano' type='text' />
                     <input className='rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 outline-0' value={planForm.monthlyPriceValue ?? 0} onChange={(event) => setPlanForm({ ...planForm, monthlyPriceValue: Number(event.target.value) })} placeholder='Valor mensal' type='number' min='0' step='0.01' />
                     <textarea className='min-h-32 resize-none rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 outline-0' value={planForm.description ?? ''} onChange={(event) => setPlanForm({ ...planForm, description: event.target.value })} placeholder='Descricao do plano' />
+                    <textarea className='min-h-36 resize-none rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 outline-0' value={(planForm.items ?? []).join('\n')} onChange={(event) => setPlanForm({ ...planForm, items: event.target.value.split('\n').map((item) => item.trim()).filter(Boolean) })} placeholder={'Itens da assinatura, um por linha\nAlface crespa\nRucula\nTomate'} />
+                    </div>
+
+                    <div className='rounded-[28px] border border-gray-200 bg-[#FCFCF8] p-6'>
+                        <p className='text-sm uppercase tracking-[0.18em] text-GrayP'>Previa do card</p>
+                        <span className='mt-4 inline-block rounded-full bg-YellowP/20 px-4 py-2 text-sm font-Manrope text-BlackH1'>
+                            {planForm.badge || 'Badge do plano'}
+                        </span>
+                        <h3 className='mt-5 text-2xl font-bold'>{planForm.plan || 'Nome do plano'}</h3>
+                        <p className='mt-3 min-h-[72px]'>{planForm.description || 'A descricao do plano aparecera aqui para o cliente comparar as opcoes.'}</p>
+                        <div className='mt-5'>
+                            <p className='text-sm uppercase tracking-[0.18em] text-GrayP'>Mensal</p>
+                            <h4 className='mt-2 text-3xl font-bold'>
+                                {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(planForm.monthlyPriceValue ?? 0))}
+                            </h4>
+                            <p className='mt-2 text-sm'>
+                                ou {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number((Number(planForm.monthlyPriceValue ?? 0) / 4).toFixed(2)))} por cesta
+                            </p>
+                        </div>
+                        <div className='mt-5 space-y-2'>
+                            {(planForm.items ?? []).slice(0, 6).map((item) => (
+                                <div key={item} className='flex items-start gap-2 text-sm'>
+                                    <span className='mt-1 h-2 w-2 shrink-0 rounded-full bg-GreenP' />
+                                    <span>{item}</span>
+                                </div>
+                            ))}
+                            {!(planForm.items ?? []).length ? <p className='text-sm'>Os itens do plano vao aparecer aqui.</p> : null}
+                        </div>
+                    </div>
                 </div>
                 {feedback ? <p className='mt-4 text-sm text-red-500'>{feedback}</p> : null}
                 <button type='button' onClick={savePlan} className='mt-8 rounded-2xl bg-YellowP px-6 py-3 font-Manrope' disabled={savingPlan}>{savingPlan ? 'Salvando...' : 'Salvar plano'}</button>

@@ -45,9 +45,11 @@ export type SubscriptionSummaryRecord = {
     id: number;
     slug: string;
     plan: string;
+    badge?: string;
     monthlyPriceValue?: number;
     monthlyPrice?: string;
     description?: string;
+    items?: string[];
     subscribers: string;
     renewals: string;
 };

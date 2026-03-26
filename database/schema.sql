@@ -2,10 +2,20 @@ create table if not exists plans (
     id serial primary key,
     slug text unique,
     name text not null,
+    badge text,
     monthly_price numeric(10, 2) not null,
     description text not null,
     active boolean not null default true,
     created_at timestamptz not null default now()
+);
+
+alter table plans add column if not exists badge text;
+
+create table if not exists plan_items (
+    id serial primary key,
+    plan_id integer not null references plans(id) on delete cascade,
+    item_name text not null,
+    sort_order integer not null default 0
 );
 
 create table if not exists customers (

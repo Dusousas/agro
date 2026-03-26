@@ -18,16 +18,17 @@ export type SubscriptionPlanOption = {
     id: number;
     slug: string;
     name: string;
+    badge: string;
     monthlyPrice: number;
     weeklyPrice: number;
     description: string;
-    badge: string;
     items: string[];
 };
 
 type PersistedPlanInput = {
     slug: string;
     name: string;
+    badge?: string;
     monthlyPrice: number;
     description: string;
 };
@@ -40,6 +41,110 @@ export type CustomerDashboardUpdateInput = {
     deliveryWindow: string;
     basketProfile: string;
 };
+
+async function ensurePlanCatalogSchema() {
+    if (!isDatabaseConfigured()) return;
+    const db = getDb();
+    await db.query(`alter table plans add column if not exists badge text`);
+    await db.query(`
+        create table if not exists plan_items (
+            id serial primary key,
+            plan_id integer not null references plans(id) on delete cascade,
+            item_name text not null,
+            sort_order integer not null default 0
+        )
+    `);
+}
+
+async function getPlanItemsMap(planIds: number[]) {
+    if (!planIds.length || !isDatabaseConfigured()) return new Map<number, string[]>();
+
+    const db = getDb();
+    const result = await db.query(
+        `
+        select plan_id, item_name
+        from plan_items
+        where plan_id = any($1::int[])
+        order by sort_order asc, id asc
+        `,
+        [planIds]
+    );
+
+    const map = new Map<number, string[]>();
+    for (const row of result.rows) {
+        const items = map.get(row.plan_id) ?? [];
+        items.push(row.item_name);
+        map.set(row.plan_id, items);
+    }
+    return map;
+}
+
+async function syncPlanItems(planId: number, items: string[]) {
+    if (!isDatabaseConfigured()) return;
+
+    const db = getDb();
+    await db.query(`delete from plan_items where plan_id = $1`, [planId]);
+
+    for (let index = 0; index < items.length; index += 1) {
+        await db.query(
+            `
+            insert into plan_items (plan_id, item_name, sort_order)
+            values ($1, $2, $3)
+            `,
+            [planId, items[index], index + 1]
+        );
+    }
+}
+
+export async function savePlanCatalogEntry(planInput: PersistedPlanInput & { id?: number; active?: boolean; items?: string[] }) {
+    if (!planInput.slug || !planInput.name || !isDatabaseConfigured()) return false;
+
+    await ensurePlanCatalogSchema();
+    const db = getDb();
+    const active = planInput.active !== false;
+    let planId = planInput.id;
+
+    if (planId) {
+        await db.query(
+            `
+            update plans
+            set
+                slug = $2,
+                name = $3,
+                badge = $4,
+                monthly_price = $5,
+                description = $6,
+                active = $7
+            where id = $1
+            `,
+            [planId, planInput.slug, planInput.name, planInput.badge ?? null, planInput.monthlyPrice, planInput.description, active]
+        );
+    } else {
+        const result = await db.query(
+            `
+            insert into plans (slug, name, badge, monthly_price, description, active)
+            values ($1, $2, $3, $4, $5, $6)
+            on conflict (slug)
+            do update set
+                name = excluded.name,
+                badge = excluded.badge,
+                monthly_price = excluded.monthly_price,
+                description = excluded.description,
+                active = excluded.active
+            returning id
+            `,
+            [planInput.slug, planInput.name, planInput.badge ?? null, planInput.monthlyPrice, planInput.description, active]
+        );
+        planId = result.rows[0]?.id;
+    }
+
+    if (!planId) return false;
+
+    const items = (planInput.items ?? []).map((item) => item.trim()).filter(Boolean);
+    await syncPlanItems(planId, items.length ? items : getPlanItemsByName(planInput.name));
+
+    return true;
+}
 
 export async function getCustomerByEmail(email: string): Promise<CustomerOnboardingData | null> {
     if (!email || !isDatabaseConfigured()) return null;
@@ -146,10 +251,11 @@ export async function saveCustomerOnboarding(email: string, payload: Omit<Custom
 export async function getActivePlans(): Promise<SubscriptionPlanOption[]> {
     if (!isDatabaseConfigured()) return getDefaultPlans();
 
+    await ensurePlanCatalogSchema();
     const db = getDb();
     const result = await db.query(
         `
-        select id, slug, name, monthly_price, description
+        select id, slug, name, badge, monthly_price, description
         from plans
         where active = true
         order by monthly_price asc, id asc
@@ -160,21 +266,24 @@ export async function getActivePlans(): Promise<SubscriptionPlanOption[]> {
         return getDefaultPlans();
     }
 
+    const itemMap = await getPlanItemsMap(result.rows.map((row) => row.id));
+
     return result.rows.slice(0, 3).map((row, index) => ({
         id: row.id,
         slug: row.slug ?? `plano-${row.id}`,
         name: row.name,
+        badge: row.badge ?? (index === 0 ? 'Entrada mais leve' : index === 1 ? 'Mais escolhido' : 'Plano mais completo'),
         monthlyPrice: Number(row.monthly_price ?? 0),
         weeklyPrice: Number((Number(row.monthly_price ?? 0) / 4).toFixed(2)),
         description: row.description,
-        badge: index === 0 ? 'Entrada mais leve' : index === 1 ? 'Mais escolhido' : 'Plano mais completo',
-        items: getPlanItemsByName(row.name),
+        items: itemMap.get(row.id) ?? getPlanItemsByName(row.name),
     }));
 }
 
 export async function saveCustomerPlan(email: string, planInput: PersistedPlanInput) {
     if (!email || !planInput.slug || !isDatabaseConfigured()) return false;
 
+    await ensurePlanCatalogSchema();
     const db = getDb();
 
     let planId: number | undefined;
@@ -197,21 +306,22 @@ export async function saveCustomerPlan(email: string, planInput: PersistedPlanIn
             update plans
             set
                 name = $2,
-                monthly_price = $3,
-                description = $4,
+                badge = $3,
+                monthly_price = $4,
+                description = $5,
                 active = true
             where id = $1
             `,
-            [planId, planInput.name, planInput.monthlyPrice, planInput.description]
+            [planId, planInput.name, planInput.badge ?? null, planInput.monthlyPrice, planInput.description]
         );
     } else {
         const insertPlanResult = await db.query(
             `
-            insert into plans (slug, name, monthly_price, description, active)
-            values ($1, $2, $3, $4, true)
+            insert into plans (slug, name, badge, monthly_price, description, active)
+            values ($1, $2, $3, $4, $5, true)
             returning id
             `,
-            [planInput.slug, planInput.name, planInput.monthlyPrice, planInput.description]
+            [planInput.slug, planInput.name, planInput.badge ?? null, planInput.monthlyPrice, planInput.description]
         );
 
         planId = insertPlanResult.rows[0]?.id;
@@ -296,21 +406,14 @@ export async function saveCustomerPlan(email: string, planInput: PersistedPlanIn
         ]
     );
 
-    const planResult = await db.query(
-        `
-        select name, monthly_price
-        from plans
-        where id = $1
-        limit 1
-        `,
-        [planId]
-    );
+    const planResult = await db.query(`select name, monthly_price from plans where id = $1 limit 1`, [planId]);
 
     const plan = planResult.rows[0];
 
     await db.query(`delete from subscription_items where subscription_id = $1`, [subscriptionId]);
 
-    const items = getPlanItemsByName(plan?.name);
+    const planItemMap = await getPlanItemsMap([planId]);
+    const items = planItemMap.get(planId) ?? getPlanItemsByName(plan?.name);
     for (let index = 0; index < items.length; index += 1) {
         await db.query(
             `

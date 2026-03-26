@@ -160,7 +160,17 @@ export async function getAdminDashboardData(): Promise<AdminDashboardData> {
         await db.query(`alter table subscriptions add column if not exists delivery_status text not null default 'Pendente'`);
         await db.query(`alter table subscriptions add column if not exists last_delivery_update timestamptz`);
 
-        const [clientsResult, plansResult, couponsResult, financeResult, deliveriesResult] = await Promise.all([
+        await db.query(`alter table plans add column if not exists badge text`);
+        await db.query(`
+            create table if not exists plan_items (
+                id serial primary key,
+                plan_id integer not null references plans(id) on delete cascade,
+                item_name text not null,
+                sort_order integer not null default 0
+            )
+        `);
+
+        const [clientsResult, plansResult, couponsResult, financeResult, deliveriesResult, planItemsResult] = await Promise.all([
             db.query(`
                 select c.id, c.name, c.email, c.city, p.name as plan, s.status
                 from customers c
@@ -171,7 +181,7 @@ export async function getAdminDashboardData(): Promise<AdminDashboardData> {
                 limit 20
             `),
             db.query(`
-                select p.id, p.slug, p.name, p.monthly_price, p.description,
+                select p.id, p.slug, p.name, p.badge, p.monthly_price, p.description,
                     count(s.id) as subscribers,
                     count(*) filter (where s.next_delivery_date = current_date) as renewals
                 from plans p
@@ -219,6 +229,11 @@ export async function getAdminDashboardData(): Promise<AdminDashboardData> {
                 order by s.next_delivery_date asc, c.name asc
                 limit 100
             `),
+            db.query(`
+                select plan_id, item_name
+                from plan_items
+                order by sort_order asc, id asc
+            `),
         ]);
 
         const registeredClients = clientsResult.rows.length
@@ -249,14 +264,23 @@ export async function getAdminDashboardData(): Promise<AdminDashboardData> {
             }))
             : adminDashboardMock.couponRows;
 
+        const planItemsMap = new Map<number, string[]>();
+        for (const row of planItemsResult.rows) {
+            const items = planItemsMap.get(row.plan_id) ?? [];
+            items.push(row.item_name);
+            planItemsMap.set(row.plan_id, items);
+        }
+
         const subscriptionRows = plansResult.rows.length
             ? plansResult.rows.map((row) => ({
                 id: row.id,
                 slug: row.slug ?? '',
                 plan: row.name,
+                badge: row.badge ?? '',
                 monthlyPriceValue: Number(row.monthly_price ?? 0),
                 monthlyPrice: formatMoney(row.monthly_price),
                 description: row.description ?? '',
+                items: planItemsMap.get(row.id) ?? [],
                 subscribers: `${row.subscribers ?? 0} clientes`,
                 renewals: `${row.renewals ?? 0} hoje`,
             }))
