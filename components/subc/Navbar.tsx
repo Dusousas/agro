@@ -1,22 +1,26 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/router";
+import { signOut, useSession } from "next-auth/react";
 import { FiMenu, FiX } from "react-icons/fi";
 
 export default function Navbar() {
     const router = useRouter();
+    const { data: session } = useSession();
     const [isOpen, setIsOpen] = useState(false);
 
     const links = useMemo(() => {
         const base = router.pathname === "/" ? "" : "/";
 
         return [
-            { href: `${base}#home`, label: "Início" },
+            { href: `${base}#home`, label: "Inicio" },
             { href: `${base}#about`, label: "Como funciona" },
             { href: `${base}#assinaturas`, label: "Assinaturas" },
-            { href: `${base}#service`, label: "Benefícios" },
+            { href: `${base}#service`, label: "Beneficios" },
             { href: `${base}#contact`, label: "Contato" },
         ];
     }, [router.pathname]);
+
+    const isLoggedIn = Boolean(session?.user?.email);
 
     useEffect(() => {
         if (isOpen) {
@@ -26,6 +30,15 @@ export default function Navbar() {
         }
         return () => document.body.classList.remove("overflow-hidden");
     }, [isOpen]);
+
+    async function handlePrimaryAction() {
+        if (isLoggedIn) {
+            await signOut({ callbackUrl: "/" });
+            return;
+        }
+
+        router.push("/painel");
+    }
 
     return (
         <>
@@ -39,12 +52,13 @@ export default function Navbar() {
                         ))}
                     </ul>
 
-                    <a
-                        href="/painel"
+                    <button
+                        type="button"
+                        onClick={handlePrimaryAction}
                         className="bg-YellowP px-5 py-3 rounded-2xl font-Manrope text-BlackH1"
                     >
-                        Minha assinatura
-                    </a>
+                        {isLoggedIn ? "Sair" : "Minha assinatura"}
+                    </button>
                 </div>
             </nav>
 
@@ -67,7 +81,7 @@ export default function Navbar() {
                         isOpen ? "translate-x-0" : "translate-x-full"
                     }`}>
                     <div className="px-6 pt-24">
-                        <p className="font-GochiHand text-2xl text-GreenP">Hortaliças Santa Cruz</p>
+                        <p className="font-GochiHand text-2xl text-GreenP">Hortalicas Santa Cruz</p>
                         <h3 className="font-Poppins text-2xl font-bold text-BlackH1 mt-2">O sabor do campo na sua mesa</h3>
                         <ul className="flex flex-col gap-5 text-lg font-semibold text-BlackH1 mt-10">
                             {links.map((link) => (
@@ -80,13 +94,16 @@ export default function Navbar() {
 
                     <div className="p-6 border-t border-gray-200">
                         <div className="space-y-3">
-                            <a
-                                href="/painel"
-                                onClick={() => setIsOpen(false)}
-                                className="bg-YellowP px-6 py-3 rounded-2xl font-Manrope text-center block"
+                            <button
+                                type="button"
+                                onClick={async () => {
+                                    setIsOpen(false);
+                                    await handlePrimaryAction();
+                                }}
+                                className="bg-YellowP px-6 py-3 rounded-2xl font-Manrope text-center block w-full"
                             >
-                                Minha assinatura
-                            </a>
+                                {isLoggedIn ? "Sair" : "Minha assinatura"}
+                            </button>
                             <a
                                 href="/admin"
                                 onClick={() => setIsOpen(false)}
