@@ -37,10 +37,10 @@ export async function getCustomerByEmail(email: string): Promise<CustomerOnboard
             coalesce(c.city, '') as city,
             coalesce(c.address_line, '') as address_line,
             coalesce(c.address_reference, '') as address_reference,
+            coalesce(c.delivery_day, '') as delivery_day,
+            coalesce(c.delivery_window, '') as delivery_window,
+            coalesce(c.basket_profile, '') as basket_profile,
             s.id as subscription_id,
-            coalesce(s.delivery_day, '') as delivery_day,
-            coalesce(s.delivery_window, '') as delivery_window,
-            coalesce(s.basket_profile, '') as basket_profile,
             p.name as plan_name
         from customers c
         left join subscriptions s on s.customer_id = c.id
@@ -83,11 +83,23 @@ export async function saveCustomerOnboarding(email: string, payload: Omit<Custom
             name = $2,
             city = $3,
             address_line = $4,
-            address_reference = $5
+            address_reference = $5,
+            delivery_day = $6,
+            delivery_window = $7,
+            basket_profile = $8
         where email = $1
         returning id
         `,
-        [email, payload.name, payload.city, payload.addressLine, payload.addressReference]
+        [
+            email,
+            payload.name,
+            payload.city,
+            payload.addressLine,
+            payload.addressReference,
+            payload.deliveryDay,
+            payload.deliveryWindow,
+            payload.basketProfile,
+        ]
     );
 
     const customerId = customerResult.rows[0]?.id;
@@ -147,7 +159,7 @@ export async function saveCustomerPlan(email: string, planId: number) {
 
     const customerResult = await db.query(
         `
-        select id
+        select id, delivery_day, delivery_window, basket_profile
         from customers
         where email = $1
         limit 1
@@ -194,14 +206,31 @@ export async function saveCustomerPlan(email: string, planId: number) {
             [
                 customerId,
                 planId,
-                'Seleção da estação',
-                'Segunda-feira',
-                '8h às 12h',
+                customerResult.rows[0]?.basket_profile || 'Seleção da estação',
+                customerResult.rows[0]?.delivery_day || 'Segunda-feira',
+                customerResult.rows[0]?.delivery_window || '8h às 12h',
             ]
         );
 
         subscriptionId = insertResult.rows[0]?.id;
     }
+
+    await db.query(
+        `
+        update subscriptions
+        set
+            basket_profile = $2,
+            delivery_day = $3,
+            delivery_window = $4
+        where id = $1
+        `,
+        [
+            subscriptionId,
+            customerResult.rows[0]?.basket_profile || 'Seleção da estação',
+            customerResult.rows[0]?.delivery_day || 'Segunda-feira',
+            customerResult.rows[0]?.delivery_window || '8h às 12h',
+        ]
+    );
 
     if (!subscriptionId) return;
 

@@ -19,6 +19,10 @@ create table if not exists customers (
     created_at timestamptz not null default now()
 );
 
+alter table customers add column if not exists delivery_day text;
+alter table customers add column if not exists delivery_window text;
+alter table customers add column if not exists basket_profile text;
+
 create table if not exists subscriptions (
     id serial primary key,
     customer_id integer not null references customers(id) on delete cascade,
